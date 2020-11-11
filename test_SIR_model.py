@@ -96,7 +96,6 @@ class EpidemicModelTestAgent(Agent):
 
     # other methods
     def recover(self):
-
         # fixed number of days needed to recover
         if self.t_inf >= self.model.inf_duration:
             # update statistics
@@ -142,13 +141,14 @@ class EpidemicModelTestAgent(Agent):
         rand_y = y_sign*random.uniform(self.model.min_d, self.model.max_d)
         return self.pos[0]+rand_x, self.pos[1]+rand_y
 
+
 # create a model as a child of the Model class
 class EpidemicModelTest(Model):
     states = {"Susceptible": 0, "Infected": 1, "Recovered": -1, "Dead": -2}
 
     def __init__(self, N_tot, N_inf, width, height, inf_radius, inf_chance, inf_duration, mortality_rate, grid=True,
                  cont_move_max_d=None, cont_move_min_d=None):
-        if not grid and cont_move_max_d is None or cont_move_min_d is None:
+        if not grid and (cont_move_max_d is None or cont_move_min_d is None):
             raise ValueError("max and min move distance are not specified")
 
         # model parameters
@@ -198,7 +198,10 @@ class EpidemicModelTest(Model):
         self.datacollector = DataCollector(model_reporters={"Dead": "n_dead",
                                                             "Recovered": "n_recovered",
                                                             "Susceptible": "n_susceptible",
-                                                            "Infected": "n_infected"})
+                                                            "Infected": "n_infected"},
+                                           agent_reporters={"Position": "pos",
+                                                            "State": "state"})
+
         print("model initialized")
 
     # models moves in steps (ticks), at each tick each active agent perform and action
@@ -234,14 +237,28 @@ def agent_portrayal(agent):
 
 
 if __name__ == "__main__":
-    testM = EpidemicModelTest(N_tot=100000, N_inf=100, width=500, height=500, inf_chance=0.7, inf_radius=2,
-                              inf_duration=50, mortality_rate=0.001, grid=False, cont_move_max_d=1, cont_move_min_d=4)
-    for i in range(1000):
+    testM = EpidemicModelTest(N_tot=100, N_inf=5, width=50, height=50, inf_chance=0.7, inf_radius=2,
+                              inf_duration=50, mortality_rate=0.001, grid=True, cont_move_max_d=1, cont_move_min_d=10)
+    for i in range(100):
         testM.step()
         print(f"STEP: {i}, Susceptible: {testM.n_susceptible}, Infected: {testM.n_infected}, "
               f"Dead: {testM.n_dead}, Recovered: {testM.n_recovered}")
         if testM.n_infected == 0:
             break
+
+
+    # get a pandas Multindex object containing all data collected from agents
+    agent_positions = testM.datacollector.get_agent_vars_dataframe()
+
+    step = 9  # step for which data is retrieved
+    # retrieve a pandas Dataframe object containing all specified agent variable for each agent at a particular step
+    agent_data = agent_positions.xs(step, level="Step")
+
+    # retrieve a pandas Timeseries object containing all agent positions at a particular step
+    positions = agent_data["Position"]
+    states = agent_data["State"]
+    positions[10]  # position of tenth agent, tuple (x, y)
+    
 
     # VISUALIZATION
     # grid = CanvasGrid(agent_portrayal, 10, 10, 1000, 1000)
@@ -259,7 +276,8 @@ if __name__ == "__main__":
     #                         "inf_radius":1,
     #                         "inf_chance":0.5,
     #                         "inf_duration":10,
-    #                         "mortality_rate": 0.1})
+    #                         "mortality_rate": 0.1,
+    #                         "grid": True})
     # server.port = 8521
     # server.launch()
 
