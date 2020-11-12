@@ -9,6 +9,7 @@ import random
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.modules import ChartModule
+import time
 
 # TO-DO: improve handling of death outcome (remove agent when it dies instead of setting its state as dead)
 # note: just using the built-in remove_agent() method will cause a bug
@@ -28,63 +29,44 @@ from mesa.visualization.modules import ChartModule
 # further optimization is required
 
 # create an agent as a child of the Agent class
-class EpidemicModelTestAgent(Agent):
+class EpidemicModelAgent(Agent):
 
-    def __init__(self, unique_id, model, init_state, grid):
+    def __init__(self, unique_id, model, init_state):
         super().__init__(unique_id, model)
         self.state = init_state
         # states: 0=susceptible, 1=infected, -1=recovered
         self.t_inf = 0  # time infected, used to determine recovery chance
-        self.grid = grid
         self.new_infected = False  # used to prevent agents to transmit during the same step they have been infected
 
     # STEPS
     # step 1
     def move(self):
-        if self.state == self.model.states["Dead"]:
+        if self.state == self.model.states["Deceased"]:
             return
-        # move on a random adjacent grid
-        # CONTINOUS SPACE
-        if not self.grid:
-            new_pos = self.move_cont_space()
-            self.model.grid.move_agent(self, new_pos)
-        # GRID SPACE (for easier visualization)
-        else:
-            possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-            new_pos = self.random.choice(possible_steps)
-            self.model.grid.move_agent(self, new_pos)
+        new_pos = self.get_new_agent_pos()
+        self.model.grid.move_agent(self, new_pos)
 
     # step 2
     def contact(self):
-        if self.state == self.model.states["Dead"]:
+        if self.state == self.model.states["Deceased"]:
             return
         if self.state == self.model.states["Infected"] and not self.new_infected:
+            # this step has an execution time of the order of 10^-4 for continuous space and it is the
+            # step that slows down the model
             # agents infected
-            if not self.grid:
-                # CONTINOUS SPACE
-                for neighbour in self.model.grid.get_neighbors([self.pos], radius=self.model.inf_radius):
-                    if neighbour.state == self.model.states["Susceptible"]:
-                        # infection chance
-                        # get a random number between between 0 and 1, compare with transmission rate
-                        if random.random() <= self.model.inf_chance:
-                            # neighbour is infected
-                            self.infect(neighbour)
-            else:
-                # GRID SPACE
-                # will infect all agents in the same cell
-                for neighbour in self.model.grid.get_cell_list_contents([self.pos]):
-                    if neighbour.state == self.model.states["Susceptible"]:
-                        # infection chance
-                        # get a random number between between 0 and 1, compare with transmission rate
-                        if random.random() <= self.model.inf_chance:
-                            # neighbour is infected
-                            self.infect(neighbour)
+            for neighbour in self.get_neighbouring_agents():
+                if neighbour.state == self.model.states["Susceptible"]:
+                    # infection chance
+                    # get a random number between between 0 and 1, compare with transmission rate
+                    if random.random() <= self.model.inf_chance:
+                        # neighbour is infected
+                        self.infect(neighbour)
         if self.new_infected:
             self.new_infected = False
 
     # step 3
     def disease(self):
-        if self.state == self.model.states["Dead"]:
+        if self.state == self.model.states["Deceased"]:
             return
         if self.state == self.model.states["Infected"]:
             self.t_inf += 1
@@ -123,14 +105,26 @@ class EpidemicModelTestAgent(Agent):
         self.model.n_infected -= 1
 
         # set state to dead
-        self.state = self.model.states["Dead"]
+        self.state = self.model.states["Deceased"]
 
         # REMOVING AGENT FROM SIMULATION WOULD BE IDEAL
         # self.model.grid.remove_agent(self) # THIS CAUSES A BUG
 
-    # MOVEMENT METHODS
+    # SPACE DEPENDENT METHODS, THEY MUST BE OVERRIDDEN BY CHILD CLASSES
+    def get_new_agent_pos(self):
+        # TO BE OVERWRITTEN BY CHILD CLASSES
+        pass
 
-    def move_cont_space(self):
+    def get_neighbouring_agents(self):
+        # TO BE OVERWRITTEN BY CHILD CLASSES
+        pass
+
+
+class EpidemicModelAgentContinous(EpidemicModelAgent):
+
+    def get_new_agent_pos(self):
+        # execution time is on the order of 10^-6
+
         # select a random number between max and min dst and add to both
         # x and y
         tmp = random.getrandbits(1)
@@ -141,14 +135,33 @@ class EpidemicModelTestAgent(Agent):
         rand_y = y_sign*random.uniform(self.model.min_d, self.model.max_d)
         return self.pos[0]+rand_x, self.pos[1]+rand_y
 
+    def get_neighbouring_agents(self):
+        # get agents in a radius
+        # WARNING: this function has an execution time of the order of 10^-4 and slows down the computation
+        # significantly
+        return self.model.grid.get_neighbors([self.pos], radius=self.model.inf_radius)
+
+
+class EpidemicModelAgentGrid(EpidemicModelAgent):
+
+    def get_new_agent_pos(self):
+        # select a random neighbouring square
+        possible_steps = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
+        return self.random.choice(possible_steps)
+
+
+    def get_neighbouring_agents(self):
+        # all agents in the same cell
+        return self.model.grid.get_cell_list_contents([self.pos])
+
 
 # create a model as a child of the Model class
-class EpidemicModelTest(Model):
-    states = {"Susceptible": 0, "Infected": 1, "Recovered": -1, "Dead": -2}
+class EpidemicModel(Model):
+    states = {"Susceptible": 0, "Infected": 1, "Recovered": -1, "Deceased": -2}
 
-    def __init__(self, N_tot, N_inf, width, height, inf_radius, inf_chance, inf_duration, mortality_rate, grid=True,
+    def __init__(self, N_tot, N_inf, width, height, inf_radius, inf_chance, inf_duration, mortality_rate, grid_space=True,
                  cont_move_max_d=None, cont_move_min_d=None):
-        if not grid and (cont_move_max_d is None or cont_move_min_d is None):
+        if not grid_space and (cont_move_max_d is None or cont_move_min_d is None):
             raise ValueError("max and min move distance are not specified")
 
         # model parameters
@@ -165,7 +178,7 @@ class EpidemicModelTest(Model):
         # TO-DO: try simultaneous activation
         self.schedule = StagedActivation(self, ["move", "contact", "disease"])
         # instantiate the grid
-        if grid:
+        if grid_space:
             self.grid = MultiGrid(width, height, torus=True)
         else:
             self.grid = ContinuousSpace(width, height, torus=True)
@@ -180,7 +193,10 @@ class EpidemicModelTest(Model):
             else:
                 init_state = self.states["Susceptible"]
 
-            a = EpidemicModelTestAgent(i, self, init_state=init_state, grid=grid)
+            if grid_space:
+                a = EpidemicModelAgentGrid(i, self, init_state=init_state)
+            else:
+                a = EpidemicModelAgentContinous(i, self, init_state=init_state)
             self.schedule.add(a)  # add the agent to the schedule
 
             # add the agent to the grid
@@ -195,7 +211,7 @@ class EpidemicModelTest(Model):
         self.n_susceptible = N_tot-n_infected
         self.n_recovered = 0
 
-        self.datacollector = DataCollector(model_reporters={"Dead": "n_dead",
+        self.datacollector = DataCollector(model_reporters={"Deceased": "n_dead",
                                                             "Recovered": "n_recovered",
                                                             "Susceptible": "n_susceptible",
                                                             "Infected": "n_infected"},
@@ -217,11 +233,11 @@ def agent_portrayal(agent):
                  "Filled": "true",
                  "Layer": 0,
                  "r": 0.5}
-    if agent.state == 0: # susc
+    if agent.state == 0:  # susc
         portrayal["Color"] = "green"
         portrayal["Layer"] = 1
         portrayal["r"] = 0.5
-    if agent.state == -1: # inf
+    if agent.state == -1:  # inf
         portrayal["Color"] = "red"
         portrayal["Layer"] = 1
         portrayal["r"] = 0.3
@@ -237,32 +253,34 @@ def agent_portrayal(agent):
 
 
 if __name__ == "__main__":
-    testM = EpidemicModelTest(N_tot=100, N_inf=5, width=50, height=50, inf_chance=0.7, inf_radius=2,
-                              inf_duration=50, mortality_rate=0.001, grid=True, cont_move_max_d=1, cont_move_min_d=10)
+    testM = EpidemicModel(N_tot=1000, N_inf=5, width=500, height=500, inf_chance=0.7, inf_radius=5,
+                              inf_duration=30, mortality_rate=0.001, grid_space=False, cont_move_max_d=1, cont_move_min_d=10)
+    start_t = time.clock()
     for i in range(100):
         testM.step()
         print(f"STEP: {i}, Susceptible: {testM.n_susceptible}, Infected: {testM.n_infected}, "
-              f"Dead: {testM.n_dead}, Recovered: {testM.n_recovered}")
+              f"Deceased: {testM.n_dead}, Recovered: {testM.n_recovered}")
         if testM.n_infected == 0:
             break
+    stop_t = time.clock()
+    print("SIMULATION TOOK ", stop_t-start_t, "SECONDS")
 
-
-    # get a pandas Multindex object containing all data collected from agents
+    # # get a pandas Multindex object containing all data collected from agents
     agent_positions = testM.datacollector.get_agent_vars_dataframe()
+    #
+    # step = 9  # step for which data is retrieved
+    # # retrieve a pandas Dataframe object containing all specified agent variable for each agent at a particular step
+    agent_data = agent_positions.xs(1, level="Step")
+    #
+    # # retrieve a pandas Timeseries object containing all agent positions at a particular step
+    # positions = agent_data["Position"]
+    # states = agent_data["State"]
+    # positions[10]  # position of tenth agent, tuple (x, y)
 
-    step = 9  # step for which data is retrieved
-    # retrieve a pandas Dataframe object containing all specified agent variable for each agent at a particular step
-    agent_data = agent_positions.xs(step, level="Step")
-
-    # retrieve a pandas Timeseries object containing all agent positions at a particular step
-    positions = agent_data["Position"]
-    states = agent_data["State"]
-    positions[10]  # position of tenth agent, tuple (x, y)
-    
 
     # VISUALIZATION
     # grid = CanvasGrid(agent_portrayal, 10, 10, 1000, 1000)
-    # chart = ChartModule([{"Label": "Dead",
+    # chart = ChartModule([{"Label": "Deceased",
     #                       "Color": "Black"}],
     #                     data_collector_name='datacollector')
     #
