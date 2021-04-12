@@ -24,9 +24,10 @@ import time
 # 3) disease course-> all infected agents roll to die or recover
 
 
-# NOTE: mesa has no built-in visualization tools for continous spaces (only for grids)
-# NOTE 2: current continous space implementation is substantially slower than the one with the grid
+# NOTE: mesa has no built-in visualization tools for continuous spaces (only for grids)
+# NOTE 2: current continuous space implementation is substantially slower than the one with the grid
 # further optimization is required
+# NOTE: time for recovering is fixed rather than random
 
 # create an agent as a child of the Agent class
 class EpidemicModelAgent(Agent):
@@ -255,14 +256,14 @@ def agent_portrayal(agent):
 if __name__ == "__main__":
     testM = EpidemicModel(N_tot=1000, N_inf=5, width=500, height=500, inf_chance=0.7, inf_radius=5,
                               inf_duration=30, mortality_rate=0.001, grid_space=False, cont_move_max_d=1, cont_move_min_d=10)
-    start_t = time.clock()
+    start_t = time.process_time()
     for i in range(100):
         testM.step()
         print(f"STEP: {i}, Susceptible: {testM.n_susceptible}, Infected: {testM.n_infected}, "
               f"Deceased: {testM.n_dead}, Recovered: {testM.n_recovered}")
         if testM.n_infected == 0:
             break
-    stop_t = time.clock()
+    stop_t = time.process_time()
     print("SIMULATION TOOK ", stop_t-start_t, "SECONDS")
 
     # # get a pandas Multindex object containing all data collected from agents
