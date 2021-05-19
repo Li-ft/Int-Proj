@@ -3,7 +3,6 @@ import matplotlib.animation as animation
 import numpy as np
 from matplotlib import cm
 import matplotlib.colors
-from test_SIR_model import EpidemicModel
 
 
 # tool for visualizing animated plots of continous space epidemic ABM
@@ -16,7 +15,7 @@ class AnimatedEpidemicPlot:
         self.width = width
         self.height = height
         self.curr_step = 0
-        self.max_step = n_steps-1
+        self.max_step = n_steps
         self.m_states = state_int_values
         self.agent_dataframe = agent_dataframe
 
@@ -24,7 +23,7 @@ class AnimatedEpidemicPlot:
         self.color_map = {"Infected": 0.5, "Susceptible": 1.5, "Recovered": 2.5, "Deceased": 3.5}  # values in the middle
         # of the respective range
         states_val = [0, 1, 2, 3, 4]
-        colors = ["red", "green", "blue", "black"]
+        colors = ["red", "lime", "cyan", "black"]
         self.cmap, self.norm = matplotlib.colors.from_levels_and_colors(states_val, colors)
 
         # Setup the figure and axes...
@@ -43,7 +42,7 @@ class AnimatedEpidemicPlot:
         # min_x, max_x = -math.ceil(self.height / 2 + 1), math.ceil(self.height / 2 + 1)
         # min_y, max_y = -math.ceil(self.width / 2 + 1), math.ceil(self.width / 2 + 1)
         self.ax.axis([-self.width/100, (self.width+self.width/100), -self.height/100, self.height+self.height/100])
-        print("setup successful")
+        print("Plot initialized..")
         # For FuncAnimation's sake, we need to return the artist we'll be using
         # Note that it expects a sequence of artists, thus the trailing comma.
         return self.scat,
@@ -69,7 +68,7 @@ class AnimatedEpidemicPlot:
             self.curr_step += 1
         pos = list(step_data["Position"])
         colors = self.map_states(list(step_data["State"]))
-        return np.array(pos).astype(np.float), np.array(colors).astype(np.int)
+        return np.array(pos).astype(np.float32), np.array(colors).astype(np.int32)
 
     def map_states(self, state_array):
         # map an array of states into an array of RGB colors
@@ -94,37 +93,12 @@ class AnimatedEpidemicPlot:
                 raise ValueError("Agent has an unrecognizable state value: ", agent_state)
         return output
 
-    def save_animation(self, filename, fps):
+    def save_animation(self, filename, fps, type):
         # saves a gif of the animated plot
-        print("Saving animated plot to file ", filename)
-        writergif = animation.PillowWriter(fps=fps)
-        self.ani.save(filename, writer=writergif)
-        print("Animated plot saved successfully")
-
-
-if __name__ == '__main__':
-    model_space_height = 500
-    model_space_width = 500
-    n_steps = 150
-
-    model = EpidemicModel(N_tot=1000, N_inf=5, width=model_space_width, height=model_space_height, inf_chance=0.7,
-                          inf_radius=2, inf_duration=30, mortality_rate=0.001, grid_space=False,
-                          cont_move_max_d=1, cont_move_min_d=10)
-    final_step = 0
-    for i in range(n_steps):
-        model.step()
-        print(f"STEP: {i}, Susceptible: {model.n_susceptible}, Infected: {model.n_infected}, "
-              f"Dead: {model.n_dead}, Recovered: {model.n_recovered}")
-        if model.n_infected == 0:
-            final_step = i
-            break
-        final_step = i
-
-    agent_data = model.datacollector.get_agent_vars_dataframe()
-    # for i in range(n_steps):
-    #     step_data = agent_data.xs(i, level="Step")
-    # animated plot
-    a = AnimatedEpidemicPlot(agent_dataframe=agent_data, height=model_space_height, width=model_space_height,
-                             state_int_values=model.states, n_steps=final_step, fps=30, agent_size = 1)
-    a.save_animation("10000_inf.gif", 2)
-    # plt.show()
+        if type == "gif":
+            print("Saving animated plot to file ", filename)
+            writergif = animation.PillowWriter(fps=fps)
+            self.ani.save(filename, writer=writergif)
+            print("Animated plot saved successfully")
+        if type == "mp4":
+            self.ani.save(filename, fps=fps)
