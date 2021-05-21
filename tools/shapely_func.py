@@ -4,6 +4,7 @@ from shapely.affinity import affine_transform
 from shapely.geometry import Point, Polygon, LineString
 from shapely.ops import triangulate
 import matplotlib.pyplot as plt
+import json
 
 def random_points_in_polygon_triangulate(polygon, k):
     """Return list of k points chosen uniformly at random inside the polygon."""
@@ -88,4 +89,34 @@ def draw_multipolygon(multipolygon):
         x, y = p.exterior.xy
         plt.plot(x, y)
     plt.show()
+
+
+def load_building_shapes_from_file(file_name, building_type_list):
+    # building_type must be a list of str
+    # expected file structure: JSON: {"building_type": [[[x1,y1],[x2,y2],[x3,y3]],[[x1,y1],[x2,y2],[x3,y3]]]}
+    output_dict = {}
+    with open(file_name, "r") as fp:
+        building_dict = json.load(fp)
+        for b_type in building_type_list:
+            output_dict[b_type] = []
+            if b_type in building_dict.keys():
+                for shape_boundary in building_dict[b_type]:
+                    output_dict[b_type].append(Polygon(shape_boundary))
+    return [output_dict[b_type] for b_type in building_type_list]
+
+
+def save_building_shapes_to_file(file_name, building_dict):
+    # expected dict structure: {"building_type": [[[x1,y1],[x2,y2],[x3,y3]],[[x1,y1],[x2,y2],[x3,y3]]]}
+    if not file_name.endswith(".json"):
+        file_name += ".json"
+    output_dict = {}
+    for building_type in building_dict.keys():
+        output_dict[building_type] = []
+        for shape in building_dict[building_type]:
+            # store the boundaries of each polygon
+            output_dict[building_type].append([(x, y) for x, y in zip(shape.boundary.xy)])
+    # store in file
+    with open(file_name, "w") as fp:
+        json.dump(output_dict, fp)
+
 

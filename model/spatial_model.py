@@ -2,7 +2,8 @@ from mesa import Agent, Model
 from mesa.time import StagedActivation
 from mesa.datacollection import DataCollector
 import random
-from tools.shapely_func import random_points_in_polygon_rejection, random_rectangle
+from tools.shapely_func import random_points_in_polygon_rejection, random_rectangle, \
+    load_building_shapes_from_file, save_building_shapes_to_file
 from shapely.geometry import Polygon, MultiPolygon
 from mesa_geo import GeoAgent
 import math
@@ -252,7 +253,7 @@ class EpidemicModel(Model):
     leisure_areaAgent = None
 
     def __init__(self, N_tot, N_inf, inf_radius, inf_chance, inf_duration, mortality_rate, population_params,
-                 grid_params, max_move_dst=None):
+                 grid_params, max_move_dst=None, buildings_file=None):
 
         print("Initializing ABM model....")
         # simulation parameters
@@ -309,7 +310,7 @@ class EpidemicModel(Model):
         bbox_height = point_dst(bbox_vertices[0], bbox_vertices[3])
         bbox_base = point_dst(bbox_vertices[0], bbox_vertices[2])
         bbox_area = bbox_base*bbox_height
-        home_ratio = grid_params["home_ratio"]  # N_house_buildings/N_families
+        self.home_ratio = grid_params["home_ratio"]  # N_house_buildings/N_families
         house_area_max = grid_params["house_a_max"]
         house_area_min = grid_params["house_a_min"]
         self.work_area_max = grid_params["work_a_max"]
@@ -323,50 +324,56 @@ class EpidemicModel(Model):
             # TODO: implement this, families described by a list of values (number of family members), ex: f = [4,3,1,2]
             raise ValueError("family_size_std != from 0 not yet implemented")
 
-        # generate spatial polygons
-        n_house_polygons = home_ratio * N_families
-        n_polygons = 0
-        house_polygons = []
-        print("Building houses....")
-        # TODO: ADD FUNCTIONALITY TO LOAD SIM SPACE FROM FILE
-        n = 0
-        while n_polygons < n_house_polygons:
-            # polygon shape will be a rectangle with random area an base/height ratio
-            # r = b/h, a=h*b; b^2 = r*a
-            # (tentative) sampling method
-            # -1 define area and ratio randomly->get height and base length
-            # -2 from 2 randomly selected points in the bbox generate a rectangle
-            # -3 if its area overlaps with that of another polygon discard and go back to -1, otherwise insert in list
-            area = random.uniform(house_area_min, house_area_max)
-            ratio = random.uniform(0.2, 0.8)
-            base_l = math.sqrt(ratio*area)
-            height_l = area/base_l
-            # RANDOM SAMPLING
-            stop = False
-            max_iter = 1000000
-            iteration = 0
-            while not stop:
-                # TODO: improve random_rectangle so that they are not always parallel to x and y axis
-                # TODO: improve n_families distribution
-                house_polygon = {"shape": random_rectangle(self.x_min, self.y_min, self.x_max, self.y_max,
-                                                           base_l, height_l), "n_families": home_ratio}
-                intersects = False
-                # FIXME: reaches max iterations very easily
-                # check if it overlaps another polygon
-                for p in house_polygons:
-                    shape = p["shape"]
-                    if shape.intersects(house_polygon["shape"]):
-                        intersects = True
-                        break
-                if not intersects:
-                    # if it doesn't accept it
-                    stop = True
-                    house_polygons.append(house_polygon)
-                iteration += 1
-                if iteration == max_iter:
-                    raise RuntimeError("random sampling for house polygon reached max iterations")
-            n_polygons += 1
-
+        house_polygons, workplaces = (None, None)
+        if buildings_file is not None:
+            house_polygons, workplaces = self.load_building_shapes(buildings_file)
+        if house_polygons is None:  # houses are not loaded
+            # generate spatial polygons
+            n_house_polygons = self.home_ratio * N_families
+            n_polygons = 0
+            house_polygons = []
+            print("Building houses....")
+            # TODO: ADD FUNCTIONALITY TO LOAD SIM SPACE FROM FILE
+            n = 0
+            while n_polygons < n_house_polygons:
+                # polygon shape will be a rectangle with random area an base/height ratio
+                # r = b/h, a=h*b; b^2 = r*a
+                # (tentative) sampling method
+                # -1 define area and ratio randomly->get height and base length
+                # -2 from 2 randomly selected points in the bbox generate a rectangle
+                # -3 if its area overlaps with that of another polygon discard and go back to -1, otherwise insert in list
+                area = random.uniform(house_area_min, house_area_max)
+                ratio = random.uniform(0.2, 0.8)
+                base_l = math.sqrt(ratio*area)
+                height_l = area/base_l
+                # RANDOM SAMPLING
+                stop = False
+                max_iter = 1000000
+                iteration = 0
+                while not stop:
+                    # TODO: improve random_rectangle so that they are not always parallel to x and y axis
+                    # TODO: improve n_families distribution
+                    house_polygon = {"shape": random_rectangle(self.x_min, self.y_min, self.x_max, self.y_max,
+                                                               base_l, height_l), "n_families": self.home_ratio}
+                    intersects = False
+                    # FIXME: reaches max iterations very easily
+                    # check if it overlaps another polygon
+                    for p in house_polygons:
+                        shape = p["shape"]
+                        if shape.intersects(house_polygon["shape"]):
+                            intersects = True
+                            break
+                    if not intersects:
+                        # if it doesn't accept it
+                        stop = True
+                        house_polygons.append(house_polygon)
+                    iteration += 1
+                    if iteration == max_iter:
+                        raise RuntimeError("random sampling for house polygon reached max iterations")
+                n_polygons += 1
+        if workplaces is not None:
+            self.workplaces_in_file = True
+            self.workplace_polygons = workplaces
         # iterate over families: generate agents instance of the family then, agents would need suitable ages
         # then generate and assign them a home areaAgent
         n_families = 0
@@ -487,9 +494,20 @@ class EpidemicModel(Model):
         if self.workers_employed_in_curr_area == self.workers_to_assign_in_curr_area:
             self.workers_to_assign_in_curr_area = random.uniform(4, self.max_workers_in_workplace)
             work_id = "a"+str(self.curr_a_id)
-            work_area = self.generate_non_overlapping_area(area_min, area_max)
+            work_area = None
+            if self.workplaces_in_file:
+                for polygon in self.workplace_polygons:
+                    if not polygon["used"]:
+                        work_area = polygon["shape"]
+                        polygon["used"] = True
+                        break
+                if work_area is None:
+                    self.workplaces_in_file = False
+            if not self.workplaces_in_file:
+                work_area = self.generate_non_overlapping_area(area_min, area_max)
+
             self.curr_work_areaAgent = new_areaAgent = EpidemicModelAreaAgent(unique_id=work_id, initial_agents=[],
-                                                   shape=work_area, model=self, type="Work")
+                                                                              shape=work_area, model=self, type="Work")
             self.schedule.add(new_areaAgent)  # add to scheduler
             self.areaAgents[work_id] = new_areaAgent
             self.curr_a_id += 1
@@ -609,19 +627,40 @@ class EpidemicModel(Model):
 
         return x_arrival, y_arrival
 
+    def load_building_shapes(self, fileName):
+        # load houses, workplaces shapes from file
+        # home output should be list of obj {"shape": shapely.polygon, "n_famiilies": int}
+        # work output should be list of obj {"shape": shapely.polygon, "used": Bool}->"used" initialized as False
+        house_polygons, workplace_polygons = load_building_shapes_from_file(fileName, ["house", "work"])
+        house_buildings = []
+        work_buildings = []
+        if len(house_polygons) == 0:
+            house_buildings = None
+        else:
+            for house_p in house_polygons:
+                house_buildings.append({"shape": house_p, "n_families": self.home_ratio})
+        if len(workplace_polygons) == 0:
+            work_buildings = None
+        else:
+            for work_p in house_polygons:
+                work_buildings.append({"shape": work_p, "used": False})
+        return house_buildings, work_buildings
+
     # DATA COLLECTION FUNCTIONS
-    def get_agent_pos(self):
-        pass
-
-    def compute_rt(self):
-    # Rt[i] =
-        pass
-
     def get_model_data(self):
         return self.datacollector.get_model_vars_dataframe()
 
     def get_agent_data(self):
         return self.datacollector.get_agent_vars_dataframe()
+
+    # GET BUILDING SHAPES
+    def get_polygons(self, b_type):
+        output_polygon_list = []
+        for area_agent in self.areaAgents.values():
+            if area_agent.type == b_type:
+                output_polygon_list.append(area_agent.shape)
+        return output_polygon_list
+
 
 def agent_portrayal(agent):
     portrayal = {"Shape": "circle",
@@ -723,4 +762,3 @@ if __name__ == "__main__":
     # Effective daily reproduction number of day t:
     #   Rt[t] = (total number of new infected of day t)/(tot number of infected(at the start of day t))
     # mortality : daily number of deaths
-    # TODO: IMPLEMENT DATA RETRIEVAL FUNCTIONS

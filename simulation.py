@@ -1,38 +1,48 @@
 from model.spatial_model import EpidemicModel
 import numpy as np
-
+from tools.shapely_func import save_building_shapes_to_file
+import pandas as pd
 
 class EpidemicSimulation:
 
-    def __init__(self):
+    def __init__(self, agent_output_file, sim_output_file):
+        # TODO: load from settings file
         self.print_realtime = False
-        self.ABMmodel = None
+        self.model = None
         self.max_steps = 0
         self.final_step = 0
-        pass
+        self.a_output_file = agent_output_file
+        self.s_output_file = sim_output_file
+        self.building_data_file = None  # files from where building data will be loaded
+        self.building_store_data_file = None  # files where building data will be stored
 
     def initialize(self, N_tot, N_inf, inf_radius, inf_chance, inf_duration, mortality_rate, population_params,
                  grid_params, sim_steps, max_move_dst=None, print_realtime = False):
 
-        self.ABMmodel = EpidemicModel(N_tot, N_inf, inf_radius, inf_chance, inf_duration, mortality_rate, population_params,
-                 grid_params)
+        self.model = EpidemicModel(N_tot, N_inf, inf_radius, inf_chance, inf_duration, mortality_rate, population_params,
+                 grid_params, buildings_file=self.building_data_file)
         self.max_steps = sim_steps
         self.print_realtime = print_realtime
 
     def simulate(self):
+        if self.a_output_file is None:
+            print("WARNING: agent data output directory not set, data won't be stored to file")
+        if self.s_output_file is None:
+            print("WARNING: model data output directory not set, data won't be stored to file")
         for i in range(self.max_steps):
-            self.ABMmodel.step()
+            self.model.step()
             if self.print_realtime:
-                print(f"STEP: {i}, Susceptible: {self.ABMmodel.n_susceptible}, Infected: {self.ABMmodel.n_infected}, "
-                      f"Deceased: {self.ABMmodel.n_dead}, Recovered: {self.ABMmodel.n_recovered}")
-            if self.ABMmodel.n_infected == 0:
+                print(f"STEP: {i}, Susceptible: {self.model.n_susceptible}, Infected: {self.model.n_infected}, "
+                      f"Deceased: {self.model.n_dead}, Recovered: {self.model.n_recovered}")
+            if self.model.n_infected == 0:
                 self.final_step = i
-            if self.ABMmodel.n_susceptible == 0:
+            if self.model.n_susceptible == 0:
                 self.final_step = i
                 break
+        self.store_results()
 
     def compute_rt_value(self, aggregation = 24):
-        model_data = self.ABMmodel.get_model_data()
+        model_data = self.model.get_model_data()
         I = model_data["Infected"]
         R = model_data["Recovered"]
         D = model_data["Deceased"]
@@ -58,12 +68,37 @@ class EpidemicSimulation:
 
     def get_timeseries(self, series_name):
         # series_name can be: "Deceased", "Recovered", "Infected", "Susceptible"
-        model_data = self.ABMmodel.get_model_data()
+        model_data = self.model.get_model_data()
         return model_data[series_name]
 
     def store_results(self):
-        # TODO: implement
-        pass
+        if self.a_output_file is None:
+            print("WARNING: agent data output directory not set, data won't be stored to file")
+        else:
+            self.model.get_model_data.to_csv(self.a_output_file)
+        if self.s_output_file is None:
+            print("WARNING: model data output directory not set, data won't be stored to file")
+        else:
+            self.model.get_agent_data.to_csv(self.s_output_file)
+
+    # MODEL DATA MANAGEMENT
+    def set_directories(self, agent_data_output, sim_data_output, buildings_load_file=None, buildings_save_file=None):
+        self.a_output_file = agent_data_output
+        self.s_output_file = sim_data_output
+
+        if buildings_load_file is not None:
+            self.building_store_data_file = buildings_load_file
+        if buildings_save_file is not None:
+            self.building_data_file = buildings_save_file
+
+    def store_buildings(self):
+        if self.building_store_data_file is None:
+            print("WARNING: building storage data not set, building cannot be stored")
+        else:
+            output_dict = {}
+            for b_type in ["house", "work"]:
+                output_dict[b_type] = self.model.get_polygons(b_type)
+            save_building_shapes_to_file(self.building_store_data_file, output_dict)  # save building shapes to file
 
 
 if __name__ == "__main__":
