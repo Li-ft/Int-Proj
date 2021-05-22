@@ -3,6 +3,7 @@ import numpy as np
 from tools.shapely_func import save_building_shapes_to_file
 import pandas as pd
 
+
 class EpidemicSimulation:
 
     def __init__(self, agent_output_file, sim_output_file):
