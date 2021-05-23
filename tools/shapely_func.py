@@ -6,6 +6,10 @@ from shapely.ops import triangulate
 import matplotlib.pyplot as plt
 import json
 
+# polygons have the .representative_point() which cheaply computes a point inside of it
+# but returns always the same point for a polygon
+
+
 def random_points_in_polygon_triangulate(polygon, k):
     """Return list of k points chosen uniformly at random inside the polygon."""
     areas = []
@@ -88,7 +92,11 @@ def draw_multipolygon(multipolygon):
     for p in multipolygon:
         x, y = p.exterior.xy
         plt.plot(x, y)
-    plt.show()
+
+
+def draw_polygon(polygon):
+    x, y = polygon.exterior.xy
+    plt.plot(x, y)
 
 
 def load_building_shapes_from_file(file_name, building_type_list):
@@ -118,5 +126,4 @@ def save_building_shapes_to_file(file_name, building_dict):
     # store in file
     with open(file_name, "w") as fp:
         json.dump(output_dict, fp)
-
 

@@ -3,11 +3,12 @@ from mesa.time import StagedActivation
 from mesa.datacollection import DataCollector
 import random
 from tools.shapely_func import random_points_in_polygon_rejection, random_rectangle, \
-    load_building_shapes_from_file, save_building_shapes_to_file
+    load_building_shapes_from_file, save_building_shapes_to_file, random_point_in_polygon
 from shapely.geometry import Polygon, MultiPolygon
 from mesa_geo import GeoAgent
 import math
 from numpy.random import randint
+import time
 
 
 def point_dst(coord_p1, coord_p2):
@@ -85,14 +86,13 @@ class EpidemicModelAgent(Agent):
 
         # spatial model attributes
         # these are all # unique ids of an EpidemicModelAreaAgent
-        if self.role == 1: # student
+        if self.role == 1:  # student
             self.agent_areas = {"school": workAgent, "home": homeAgent}
-        if self.role == 0: # worker
+        if self.role == 0:  # worker
             self.agent_areas = {"work": workAgent, "home": homeAgent}
-        if self.role == 2: # enemployed
+        if self.role == 2:  # enemployed
             self.agent_areas = {"home": homeAgent}
         self.currArea_type = startArea  # string= "home", "work", "school" or "leisure"
-        # TODO: fix startArea in the model
 
     # STEPS
     # step 1
@@ -104,7 +104,19 @@ class EpidemicModelAgent(Agent):
         arrival_area_type = self.model.get_move_type(self)
         if arrival_area_type == 0:
             # intra-area movement
+            if self.model.DEBUG:
+                start_t = time.time()
             self.intra_area_move()
+
+            # DEBUG
+            # ------------------
+            if self.model.DEBUG:
+                end_t = time.time()
+                computation_time = end_t - start_t
+                self.model.timings["cumulative_stats"]["intra_area_move"]["n"] += 1
+                self.model.timings["cumulative_stats"]["intra_area_move"]["cum_sum"] += computation_time
+                if computation_time > self.model.timings["values"]["intra_area_move"]["max"]:
+                    self.model.timings["values"]["intra_area_move"]["max"] = computation_time
         else:
             # inter-area movement
             if arrival_area_type == "home":
@@ -117,7 +129,20 @@ class EpidemicModelAgent(Agent):
                 dst_area_id = self.model.leisure_area_id
             else:
                 raise ValueError(f"Unrecognized area type: {arrival_area_type}")
+
+            if self.model.DEBUG:
+                start_t = time.time()
+
             self.inter_area_move(dst_area_id)
+
+            if self.model.DEBUG:
+                end_t = time.time()
+                computation_time = end_t - start_t
+                self.model.timings["cumulative_stats"]["inter_area_move"]["n"] += 1
+                self.model.timings["cumulative_stats"]["inter_area_move"]["cum_sum"] += computation_time
+                if computation_time > self.model.timings["values"]["inter_area_move"]["max"]:
+                    self.model.timings["values"]["inter_area_move"]["max"] = computation_time
+
             self.currArea_type = arrival_area_type
 
     def intra_area_move(self):
@@ -216,14 +241,23 @@ class EpidemicModelAreaAgent(GeoAgent):
                     self.agent_infect(agent)
 
     def agent_infect(self, center_agent):
+        if self.model.DEBUG:
+            start_t = time.time()
         # roll a chance to infect nearby agents of the same area
         for agent in self.agents_contained:
             if agent.state == self.model.states["Susceptible"]:
                 # check if in range, function in model class -> depends on model params
                 if self.model.in_range(center_agent, agent):
                     # if in range and susceptible roll chance to infect
-                    if self.model.infection_chance():  # TODO: implement in model
+                    if self.model.infection_chance():
                         center_agent.infect(agent)
+        if self.model.DEBUG:
+            end_t = time.time()
+            computation_time = end_t - start_t
+            self.model.timings["cumulative_stats"]["contact"]["n"] += 1
+            self.model.timings["cumulative_stats"]["contact"]["cum_sum"] += computation_time
+            if computation_time > self.model.timings["values"]["contact"]["max"]:
+                self.model.timings["values"]["contact"]["max"] = computation_time
 
     # step 3
     def disease(self):
@@ -253,8 +287,16 @@ class EpidemicModel(Model):
     leisure_areaAgent = None
 
     def __init__(self, N_tot, N_inf, inf_radius, inf_chance, inf_duration, mortality_rate, population_params,
-                 grid_params, max_move_dst=None, buildings_file=None):
+                 grid_params, max_move_dst=None, buildings_file=None, DEBUG = False):
 
+        self.DEBUG = DEBUG
+        if self.DEBUG:
+            self.timings = dict()
+            self.timings["values"] = {"inter_area_move": {"avg": 0, "max": 0}, "intra_area_move": {"avg": 0, "max": 0},
+                                      "contact": {"avg": 0, "max": 0}}
+            self.timings["cumulative_stats"] = {"inter_area_move": {"n": 0, "cum_sum": 0},
+                                                "intra_area_move": {"n": 0, "cum_sum": 0},
+                                                "contact": {"n": 0, "cum_sum": 0}}
         print("Initializing ABM model....")
         # simulation parameters
         self.num_agents = N_tot
@@ -371,6 +413,7 @@ class EpidemicModel(Model):
                     if iteration == max_iter:
                         raise RuntimeError("random sampling for house polygon reached max iterations")
                 n_polygons += 1
+        self.workplaces_in_file = False
         if workplaces is not None:
             self.workplaces_in_file = True
             self.workplace_polygons = workplaces
@@ -598,6 +641,7 @@ class EpidemicModel(Model):
     # SIMULATION FUNCTIONS
     # roll a chance to infect
     def infection_chance(self):
+        # TODO: improve infection function
         if random.uniform(0, 1) < self.inf_chance:
             return True
         return False
@@ -621,10 +665,12 @@ class EpidemicModel(Model):
         self.areaAgents[new_area_id].agents_contained.append(agent_to_add)
 
     def agent_dst_coords(self, agent, dst_area_id):
+        # TODO: find a better optimized movement function
         # function to set agent coordinates in inter-area movement
         # selects a random point inside the specified area
-        x_arrival, y_arrival = random_points_in_polygon_rejection(self.areaAgents[dst_area_id].shape, 1)[0]
-
+        # x_arrival, y_arrival = random_points_in_polygon_rejection(self.areaAgents[dst_area_id].shape, 1)[0]
+        x, y = self.areaAgents[dst_area_id].shape.representative_point().xy
+        x_arrival, y_arrival = x[0], y[0]
         return x_arrival, y_arrival
 
     def load_building_shapes(self, fileName):
@@ -660,6 +706,14 @@ class EpidemicModel(Model):
             if area_agent.type == b_type:
                 output_polygon_list.append(area_agent.shape)
         return output_polygon_list
+
+    # DEBUG FUNCTIONS
+    def get_debug_data(self):
+        for agent_action in self.timings["values"].keys():
+            self.timings["values"][agent_action]["avg"] = self.timings["cumulative_stats"][agent_action]["cum_sum"]/\
+                                                          self.timings["cumulative_stats"][agent_action]["n"]
+
+        return self.timings["values"]
 
 
 def agent_portrayal(agent):
