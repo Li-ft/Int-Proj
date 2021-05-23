@@ -198,7 +198,6 @@ class EpidemicModelAgent(Agent):
         # infect another agent
         agent.state = self.model.states["Infected"]
         agent.new_infected = True
-        # TODO: compute statistics
 
     def die(self):
         # update statistics
@@ -375,7 +374,6 @@ class EpidemicModel(Model):
             n_polygons = 0
             house_polygons = []
             print("Building houses....")
-            # TODO: ADD FUNCTIONALITY TO LOAD SIM SPACE FROM FILE
             n = 0
             while n_polygons < n_house_polygons:
                 # polygon shape will be a rectangle with random area an base/height ratio
@@ -668,9 +666,7 @@ class EpidemicModel(Model):
         # TODO: find a better optimized movement function
         # function to set agent coordinates in inter-area movement
         # selects a random point inside the specified area
-        # x_arrival, y_arrival = random_points_in_polygon_rejection(self.areaAgents[dst_area_id].shape, 1)[0]
-        x, y = self.areaAgents[dst_area_id].shape.representative_point().xy
-        x_arrival, y_arrival = x[0], y[0]
+        x_arrival, y_arrival = random_points_in_polygon_rejection(self.areaAgents[dst_area_id].shape, 1)[0]
         return x_arrival, y_arrival
 
     def load_building_shapes(self, fileName):
