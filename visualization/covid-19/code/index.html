@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>virusMap</title>
+    <link rel="stylesheet" href="css/index.css" />
+  </head>
+  <body>
+    <!-- 头部的盒子 -->
+    <header>
+      <h1>COVID-19 Situation Turin</h1>
+      <div class="showTime"></div>
+      <script>
+         var t = null;
+         t = setTimeout(time, 1000); //開始运行
+        function time() {
+          clearTimeout(t); //清除定时器
+          var timezone = 2;
+          var offset_GMT = new Date().getTimezoneOffset();
+          var nowDate = new Date().getTime();
+          dt = new Date(nowDate + offset_GMT * 60 * 1000 + timezone * 60 * 60 * 1000);
+          var y = dt.getFullYear();
+          var mt = dt.getMonth() + 1;
+          var day = dt.getDate();
+          var h = dt.getHours(); //获取时
+          var m = dt.getMinutes(); //获取分
+          var s = dt.getSeconds(); //获取秒
+          document.querySelector(".showTime").innerHTML = y + "-" + mt + "-" + day + " " + h + ":" + m + ":" + s ;
+          t = setTimeout(time, 1000); //设定定时器，循环运行
+        }
+
+     </script>
+      &
+    </header>
+
+    <!-- 页面主体部分 -->
+    <section class="mainbox">
+      <div class="column">
+        <div class="panel line">
+          <h2>case <a href="javacript:;"></a
+            ><a href="javascript:;"></a>
+          </h2>
+          <div class="chart"></div>
+          <div class="panel-footer"></div>
+        </div>
+        <div class="panel bar">
+          <h2>2</h2>
+          <div class="chart"></div>
+          <div class="panel-footer"></div>
+        </div>
+        <div class="panel pie">
+          <h2>Actual infection coefficient</h2>
+          <div class="chart"></div>
+          <div class="panel-footer"></div>
+        </div>
+      </div>
+      <div class="column">
+        <!-- no模块制作 -->
+        <div class="no">
+          <div class="no-hd">
+            <ul>
+              <li>4153374</li>
+              <li>124063</li>
+            </ul>
+          </div>
+          <div class="no-bd">
+            <ul>
+              <li>Total cases</li>
+              <li>deceased</li>
+            </ul>
+          </div>
+        </div>
+        <!-- 地图模块 -->
+        <div class="map">
+          <div class="chart"></div>
+        </div>
+      </div>
+
+
+      <div class="column">
+        <div class="panel bar2">
+          <h2>predict</h2>
+          <div class="chart"></div>
+          <div class="panel-footer"></div>
+        </div>
+        <div class="panel line2">
+          <h2>RT</h2>
+          <div class="chart"></div>
+          <div class="panel-footer"></div>
+        </div>
+        <div class="panel pie2">
+          <h2>Predict  infection coefficient</h2>
+          <div class="chart"></div>
+          <div class="panel-footer"></div>
+        </div>
+      </div>
+    </section>
+    <script src="js/flexible.js"></script>
+    <script src="js/echarts.min.js"></script>
+    <script src="js/jquery.js"></script>
+    <script src="js/index.js"></script>
+    <script src="jquery-1.9.1.min.js"></script>
+  </body>
+</html>
