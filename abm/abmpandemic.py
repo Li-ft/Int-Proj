@@ -174,11 +174,8 @@ class ABMPandemic:
                 break
             self.date = self.date + datetime.timedelta(1)
         log.info(f"dead data: {self.result_df['dead']}")
-        result = list(self.result_df['dead'])
-        if (residual_num := 192 - len(self.result_df)) > 0:
-            result.extend([0] * residual_num)
 
-        return result
+        return self.result_df['dead']
 
     def holiday(self, today_positive_num):
         for hour in range(24):
@@ -607,10 +604,6 @@ class ABMPandemic:
                     log.debug('leisure limited')
                     # get spaces with constraint
                     self.space_constraint_df = self.space_df.query(f'type=={biz_pt_type_constraint}')
-                    if 22136 in self.space_constraint_df.index:
-                        log.error(self.space_constraint_df.index)
-                        log.error(self.space_constraint_df[['type','staffs_idx']])
-                        log.error(f'22136 is classified as type 1 by mistake')
 
                     # when the constraint space is closed, all clients leave the space
                     ppl_leave_idx = list(chain.from_iterable(self.space_constraint_df['susceptible_inside']))
@@ -747,17 +740,17 @@ class ABMPandemic:
 
         space_df_copy = self.space_df.copy()
         for agent, space in df['space_idx'].items():
-            if type(space_df_copy.at[space, col_name]) is not list:
-                log.error(type(space_df_copy.at[space, col_name]))
-                log.error(space_df_copy.at[space, col_name])
-                # log.error(space_df_copy[col_name].dtype)
-                # space_df_copy[col_name]=space_df_copy[col_name].astype(object)
-                print(space, col_name)
-
-                space_df_copy.at[28825, 'susceptible_inside']= [1,2,3]
-                print(space_df_copy.at[28825, 'susceptible_inside'])
-                space_df_copy.at[space, col_name]=space_df_copy.at[space, col_name].values.tolist()
-                log.warning(type(space_df_copy.at[space, col_name]))
+            # if type(space_df_copy.at[space, col_name]) is not list:
+            #     log.error(type(space_df_copy.at[space, col_name]))
+            #     log.error(space_df_copy.at[space, col_name])
+            #     # log.error(space_df_copy[col_name].dtype)
+            #     # space_df_copy[col_name]=space_df_copy[col_name].astype(object)
+            #     print(space, col_name)
+            #
+            #     space_df_copy.at[28825, 'susceptible_inside']= [1,2,3]
+            #     print(space_df_copy.at[28825, 'susceptible_inside'])
+            #     space_df_copy.at[space, col_name]=space_df_copy.at[space, col_name].values.tolist()
+            #     log.warning(type(space_df_copy.at[space, col_name]))
                 # space_df_copy.at[space, col_name]
             space_df_copy.at[space, col_name].append(agent)
 

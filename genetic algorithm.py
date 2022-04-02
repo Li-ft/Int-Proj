@@ -1,5 +1,4 @@
 from datetime import datetime
-
 import numpy as np
 import pandas as pd
 from abm.abmpandemic import ABMPandemic
@@ -71,7 +70,12 @@ def loss_func(p):
                       severe_dur=int(severe_dur),
                       infectious_dur=int(infectious_dur),
                       origin_infected_num=int(origin_infected_num))
-    return mse(abm.run(), covid_data_df['Daily Death'])
+    train_value=list(abm.run())
+    real_value=covid_data_df.loc[begin_date:end_date,'Daily Death']
+    if (residual_num := len(real_value) - len(train_value)) > 0:
+        train_value.extend([0] * residual_num)
+
+    return mse(train_value, real_value)
 
 
 ga = GA(func=loss_func,
