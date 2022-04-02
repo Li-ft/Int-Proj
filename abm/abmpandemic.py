@@ -64,7 +64,7 @@ class ABMPandemic:
         self.space_df['susceptible_inside'] = np.empty((len(self.space_df), 0)).tolist()
         self.space_df['infector_inside'] = np.empty((len(self.space_df), 0)).tolist()
         # self.leisure_points_df = space_df.query('type==3')
-        log.debug(f'{self.space_df.info()}')
+        # log.debug(f'{self.space_df.info()}')
 
         self.holiday_df = holiday_df
         self.infect_p = infect_p
@@ -113,6 +113,9 @@ class ABMPandemic:
         self.infect_proportion = 0
         self.date = pd.to_datetime(begin_date)
         self.step_count = 0
+
+        self.not_work_workers_idx = []
+        self.not_work_workers_identity=[]
 
     def step(self, day_type: str, hour: int):
         log.info(f'step: {self.step_count}, hour: {hour}')
@@ -205,6 +208,7 @@ class ABMPandemic:
             susceptible_leave_idx = self.susceptible_df.query('1<=identity<4').index
             # log.debug(f'off work: {susceptible_leave_idx}')
             self.leave_space(susceptible_leave_idx)
+
         commute_people_df = self.susceptible_df.query('1<=identity<4 & use_pt==1')
         # commute_people_df = self.agents_df.loc[commute_people_idx]
         commute_people_df.loc[:, 'covid_state'] = np.random.choice([0, 1],
@@ -216,6 +220,7 @@ class ABMPandemic:
         if hour == 8:
             log.info('enter work/study place')
             susceptible_work_df = self.susceptible_df.query('1<=identity<4')
+
             self.enter_space(susceptible_work_df.index,
                              susceptible_work_df['employer'],
                              'susceptible_inside')
@@ -302,8 +307,8 @@ class ABMPandemic:
         self.susceptible_df['leisure_timer'] = 0
 
         # reset the policy control
-        self.space_df = pd.concat([self.space_df, self.space_constraint_df])
-        self.leisure_p = self.leisure_p_normal
+        # self.space_df = pd.concat([self.space_df, self.space_constraint_df])
+        # self.leisure_p = self.leisure_p_normal
 
         self.covid_test(today_positive_num)
         self.infection_balance()
@@ -584,9 +589,9 @@ class ABMPandemic:
         restricted_hour = self.policy_df.loc[date, 'from']
 
         if not pd.isna(biz_pt_type_constraint):
+
             if not pd.isna(restricted_hour):
                 if hour ==restricted_hour:
-                    log.debug('leisure limited')
                     # get spaces with constraint
                     self.space_constraint_df = self.space_df.query(f'type=={biz_pt_type_constraint}')
                     # when the constraint space is closed, all clients leave the space
@@ -596,11 +601,17 @@ class ABMPandemic:
                     self.space_df.drop(self.space_constraint_df.index, inplace=True)
                     # the leisure desire of people will decrease accordingly
                     self.leisure_p = self.leisure_p_constraint
+                    log.debug('leisure limited with hour')
             else:
                 if hour == 0:
                     log.debug('leisure limited')
                     # get spaces with constraint
                     self.space_constraint_df = self.space_df.query(f'type=={biz_pt_type_constraint}')
+                    if 22136 in self.space_constraint_df.index:
+                        log.error(self.space_constraint_df.index)
+                        log.error(self.space_constraint_df[['type','staffs_idx']])
+                        log.error(f'22136 is classified as type 1 by mistake')
+
                     # when the constraint space is closed, all clients leave the space
                     ppl_leave_idx = list(chain.from_iterable(self.space_constraint_df['susceptible_inside']))
                     self.leave_space(ppl_leave_idx)
@@ -609,6 +620,12 @@ class ABMPandemic:
                     # the leisure desire of people will decrease accordingly
                     self.leisure_p = self.leisure_p_constraint
 
+            if len(self.space_constraint_df)>0:
+                not_work_workers = set(chain.from_iterable(self.space_constraint_df['staffs_idx'])) \
+                    .intersection(set(self.susceptible_df.index))
+                self.not_work_workers_idx = not_work_workers
+                self.not_work_workers_identity = self.susceptible_df.loc[not_work_workers, 'identity']
+                self.susceptible_df.loc[not_work_workers, 'identity'] = 5
 
         # # restricted_type =
         # if hour == restricted_hour:
@@ -676,8 +693,19 @@ class ABMPandemic:
     def restore_policy_ctrl(self):
         self.leisure_p = self.leisure_p_normal
         # self.space_df = pd.concat([self.space_df, self.space_constraint_df])
-        # self.space_df=self.space_df.append(self.space_constraint_df)
-        self.space_df.loc[self.space_constraint_df.index]=self.space_constraint_df
+        self.space_df=self.space_df.append(self.space_constraint_df)
+        # self.space_df.loc[self.space_constraint_df.index]=self.space_constraint_df
+        self.space_constraint_df=pd.DataFrame(columns=self.space_df.columns)
+
+        if len(self.not_work_workers_idx)>0 and len(self.not_work_workers_identity)>0:
+            df=pd.DataFrame()
+            df['identity']=self.not_work_workers_identity
+            df.index=self.not_work_workers_idx
+            susceptible_idx=set(df.index).intersection(set(self.susceptible_df.index))
+            infected_idx=set(df.index).intersection(set(self.infected_df.index))
+            assert len(susceptible_idx)+len(infected_idx)==len(df)
+            self.susceptible_df.loc[susceptible_idx, 'identity']=df.loc[susceptible_idx, 'identity']
+            self.infected_df.loc[infected_idx, 'identity']=df.loc[infected_idx, 'identity']
 
     def leave_space(self, agent_idx: Collection[int]):
         # log.debug('leave space')
@@ -721,11 +749,14 @@ class ABMPandemic:
         for agent, space in df['space_idx'].items():
             if type(space_df_copy.at[space, col_name]) is not list:
                 log.error(type(space_df_copy.at[space, col_name]))
-                log.error(type(self.space_constraint_df.at[space, col_name]))
-                # log.error(space_df_copy.at[space, col_name])
+                log.error(space_df_copy.at[space, col_name])
                 # log.error(space_df_copy[col_name].dtype)
-                space_df_copy[col_name]=space_df_copy[col_name].astype(object)
-                space_df_copy.at[space, col_name]=list(space_df_copy.at[space, col_name])
+                # space_df_copy[col_name]=space_df_copy[col_name].astype(object)
+                print(space, col_name)
+
+                space_df_copy.at[28825, 'susceptible_inside']= [1,2,3]
+                print(space_df_copy.at[28825, 'susceptible_inside'])
+                space_df_copy.at[space, col_name]=space_df_copy.at[space, col_name].values.tolist()
                 log.warning(type(space_df_copy.at[space, col_name]))
                 # space_df_copy.at[space, col_name]
             space_df_copy.at[space, col_name].append(agent)

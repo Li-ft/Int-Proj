@@ -11,7 +11,7 @@ company_staff_num_lower = 5
 PT_rate = 0.34
 student_num_per_room = 25
 
-with open("../data/bussiness point.geojson", 'r') as f:
+with open(r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\bussiness point.geojson", 'r') as f:
     data_json = json.load(f)
 
 # type of the business point
@@ -261,7 +261,7 @@ company_df['staffs_idx'] = staffs_idx
 company_df['type'] = 9
 # company_df = reset_col_2empty_list(company_df, 'susceptible_inside', 'infector_inside')
 company_df['acreage'] = acreage_lst
-company_df.index = range(len(business_point_df), len(business_point_df) + len(company_df))
+company_df.index = range(business_point_df.index[-1]+1, business_point_df.index[-1]+1 + len(company_df))
 for company_idx, staff_idx in company_df['staffs_idx'].items():
     agents_df.at[staff_idx, 'employer'] = company_idx
 business_point_df = business_point_df.append(company_df)
@@ -274,7 +274,7 @@ school_df['staffs_idx'] = student_idx_distribute
 school_df['type'] = 8
 # school_df = reset_col_2empty_list(school_df, 'susceptible_inside', 'infector_inside')
 school_df['acreage'] = 50
-school_df.index = range(len(business_point_df), len(business_point_df) + len(school_df))
+school_df.index = range(business_point_df.index[-1]+1, business_point_df.index[-1]+1 + len(school_df))
 for school_idx, student_idx in school_df['staffs_idx'].items():
     agents_df.at[student_idx, 'employer'] = school_idx
 business_point_df = business_point_df.append(school_df)

@@ -7,7 +7,7 @@ from sko.GA import GA
 from sklearn.metrics import mean_squared_error as mse
 
 begin_date = '2020-02-22'
-end_date = '2020-07-31'
+end_date = '2020-03-31'
 agents_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\agents.csv",
                         dtype={'home_x': float,
                                'home_y': float,
@@ -20,6 +20,7 @@ agents_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdiscipl
                                'employer': int,
                                'quarantine': int})
 space_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\business point.csv",
+                       index_col=0,
                        dtype={'type': int,
                               'acreage': float},
                        converters={
