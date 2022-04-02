@@ -170,7 +170,7 @@ class ABMPandemic:
             else:
                 self.workday(daily_positive_num)
             # stopping condition
-            if len(self.infected_df) == 0 or pd.to_datetime(self.date) > pd.to_datetime(self.end_date):
+            if len(self.infected_df) == 0 or pd.to_datetime(self.date) == pd.to_datetime(self.end_date):
                 break
             self.date = self.date + datetime.timedelta(1)
         log.info(f"dead data: {self.result_df['dead']}")

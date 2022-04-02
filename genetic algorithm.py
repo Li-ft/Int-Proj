@@ -74,6 +74,8 @@ def loss_func(p):
     real_value=covid_data_df.loc[begin_date:end_date,'Daily Death']
     if (residual_num := len(real_value) - len(train_value)) > 0:
         train_value.extend([0] * residual_num)
+    else:
+        train_value=train_value[:39]
 
     return mse(train_value, real_value)
 
