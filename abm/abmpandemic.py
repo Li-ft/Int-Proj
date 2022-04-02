@@ -351,7 +351,6 @@ class ABMPandemic:
         # assert len(susceptible_exposed_idx) == len(infects_p)
         # df = pd.DataFrame()
         # df['infect_chance'] = infects_p
-        # assert df['infect_chance'].any() <= 1
         # df.index = susceptible_exposed_idx
         # # randomly decide who will be infected
         # df['is_infected'] = np.random.binomial(1, df['infect_chance'], len(df))
@@ -384,7 +383,6 @@ class ABMPandemic:
         df['infect_chance'] = infects_p
         df.index = all_ppl_inside
         df = df.loc[exposed_idx]
-        assert df['infect_chance'].all() <= 1
         # df.index = exposed_idx
         # randomly decide who will be infected
         df.loc[:, 'is_infected'] = np.random.binomial(1, df['infect_chance'], len(df))
@@ -397,8 +395,6 @@ class ABMPandemic:
 
     def covid_state_timer_decrease(self):
         infected_df_copy = self.infected_df.copy()
-        if infected_df_copy['covid_state_timer'].any() == 0:
-            log.error(pd.value_counts(infected_df_copy['covid_state_timer']))
         infected_df_copy['covid_state_timer'] -= 1
 
         # latent

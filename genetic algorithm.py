@@ -7,7 +7,7 @@ from sklearn.metrics import mean_squared_error as mse
 
 begin_date = '2020-02-22'
 end_date = '2020-03-31'
-agents_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\agents.csv",
+agents_df = pd.read_csv(r"data\agents.csv",
                         dtype={'home_x': float,
                                'home_y': float,
                                'family_idx': int,
@@ -18,7 +18,7 @@ agents_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdiscipl
                                'use_pt': int,
                                'employer': int,
                                'quarantine': int})
-space_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\business point.csv",
+space_df = pd.read_csv(r"data\business point.csv",
                        index_col=0,
                        dtype={'type': int,
                               'acreage': float},
@@ -28,15 +28,15 @@ space_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdiscipli
                                    'staffs_idx': eval})
 
 policy_df = pd.read_excel(
-    r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\policy constraint.xlsx",
+    r"data\policy constraint.xlsx",
     sheet_name=0,
     index_col='date',
     date_parser=lambda x: pd.datetime.strptime(x, '%Y-%m-%d'))
-holiday_df = pd.read_csv(r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\holiday.csv",
+holiday_df = pd.read_csv(r"data\holiday.csv",
                          index_col='date',
                          date_parser=lambda x: datetime.strptime(x, '%Y/%m/%d'))
 covid_data_df = pd.read_excel(
-    r"C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\data\covid data torino province.xlsx",
+    r"data\covid data torino province.xlsx",
     sheet_name = 0,
     index_col='Date',
     date_parser=lambda x: datetime.strptime(x, '%Y-%m-%d'))
