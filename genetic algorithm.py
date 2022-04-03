@@ -54,7 +54,7 @@ def loss_func(p):
     p_latent_2infectious, p_infectious_2severe, p_severe_2dead, \
     leisure_p_constraint, sickbed_buff, \
     severe_dur, infectious_dur, origin_infected_num = p
-    log.info(f'params: {p}')
+
     abm = ABMPandemic(begin_date=begin_date,
                       end_date=end_date,
                       agents_df=agents_df,
@@ -83,6 +83,7 @@ def loss_func(p):
         train_value = train_value[:len(real_value)]
 
     result=mse(train_value, real_value)
+    log.info(f'params: {p}')
     log.info(f'error: {result}')
     return result
 
