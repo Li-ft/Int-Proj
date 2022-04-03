@@ -23,9 +23,9 @@ space_df = pd.read_csv(r"data\business point.csv",
                        dtype={'type': int,
                               'acreage': float},
                        converters={
-                                   # 'susceptible_inside': eval,
-                                   # 'infector_inside': eval,
-                                   'staffs_idx': eval})
+                           # 'susceptible_inside': eval,
+                           # 'infector_inside': eval,
+                           'staffs_idx': eval})
 
 policy_df = pd.read_excel(
     r"data\policy constraint.xlsx",
@@ -37,7 +37,7 @@ holiday_df = pd.read_csv(r"data\holiday.csv",
                          date_parser=lambda x: datetime.strptime(x, '%Y/%m/%d'))
 covid_data_df = pd.read_excel(
     r"data\covid data torino province.xlsx",
-    sheet_name = 0,
+    sheet_name=0,
     index_col='Date',
     date_parser=lambda x: datetime.strptime(x, '%Y-%m-%d'))
 daily_positive_series = covid_data_df['Daily New']
@@ -49,6 +49,7 @@ def loss_func(p):
     p_latent_2infectious, p_infectious_2severe, p_severe_2dead, \
     leisure_p_constraint, sickbed_buff, \
     severe_dur, infectious_dur, origin_infected_num = p
+    assert leisure_p_constraint <= leisure_p
     print(p)
     abm = ABMPandemic(begin_date=begin_date,
                       end_date=end_date,
@@ -70,23 +71,23 @@ def loss_func(p):
                       severe_dur=int(severe_dur),
                       infectious_dur=int(infectious_dur),
                       origin_infected_num=int(origin_infected_num))
-    train_value=list(abm.run())
-    real_value=covid_data_df.loc[begin_date:end_date,'Total Death']
+    train_value = list(abm.run())
+    real_value = covid_data_df.loc[begin_date:end_date, 'Total Death']
     if (residual_num := len(real_value) - len(train_value)) > 0:
         train_value.extend([0] * residual_num)
     else:
-        train_value=train_value[:39]
+        train_value = train_value[:39]
 
     return mse(train_value, real_value)
 
 
 ga = GA(func=loss_func,
         n_dim=11,
-        size_pop=50,
-        max_iter=800,
+        size_pop=40,
+        max_iter=1000,
         prob_mut=0.001,
-        lb=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-        ub=[0.3, 0.3, 0.02, 0.9, 0.9, 0.9, 0.02, 1, 30, 30, 30],
+        lb=[0, 0, 0.1, 0, 0, 0, 0.1, 0.1, 1, 1, 1],
+        ub=[0.3, 0.3, 0.12, 0.9, 0.9, 0.9, 0.12, 0.9, 30, 30, 30],
         precision=[1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1, 1, 1],
         constraint_ueq=[lambda p: p[2] - p[6]])
 best_x, best_y = ga.run()
