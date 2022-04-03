@@ -14,7 +14,7 @@ def log_config(log_name: str, log_path:str):
     CONSOLE_LEVEL= logging.INFO
 
     # LOGFORMAT = "%(log_color)s%(asctime)s %(levelname)-8s%(reset)s | %(log_color)s%(message)s%(reset)s"
-    LOGFORMAT = "%(log_color)s%(message)s%(reset)s"
+    LOGFORMAT = "%(log_color)s%(levelname)s%(reset)s %(log_color)s%(message)s%(reset)s"
     logging.root.setLevel(LOG_LEVEL)
     formatter = ColoredFormatter(LOGFORMAT,
                                  log_colors={

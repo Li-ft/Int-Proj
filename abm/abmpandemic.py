@@ -7,7 +7,7 @@ from logs.config import log_config
 
 # tp: transport
 # p: probability
-log = log_config('abm', r'..\logs\log.txt')
+log = log_config('abm', r'.\logs\log.txt')
 dead_data_num = 192
 
 

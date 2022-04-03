@@ -4,6 +4,11 @@ import pandas as pd
 from abm.abmpandemic import ABMPandemic
 from sko.GA import GA
 from sklearn.metrics import mean_squared_error as mse
+from logs.config import log_config
+
+
+log=log_config('result', r'.\logs\result.txt')
+best_result_log=log_config('best result', r'.\logs\best result.txt')
 
 begin_date = '2020-02-22'
 end_date = '2020-03-31'
@@ -49,8 +54,7 @@ def loss_func(p):
     p_latent_2infectious, p_infectious_2severe, p_severe_2dead, \
     leisure_p_constraint, sickbed_buff, \
     severe_dur, infectious_dur, origin_infected_num = p
-    print(p)
-    assert leisure_p_constraint <= leisure_p
+    log.info(f'params: {p}')
     abm = ABMPandemic(begin_date=begin_date,
                       end_date=end_date,
                       agents_df=agents_df,
@@ -76,19 +80,22 @@ def loss_func(p):
     if (residual_num := len(real_value) - len(train_value)) > 0:
         train_value.extend([0] * residual_num)
     else:
-        train_value = train_value[:39]
+        train_value = train_value[:len(real_value)]
 
-    return mse(train_value, real_value)
+    result=mse(train_value, real_value)
+    log.info(f'error: {result}')
+    return result
 
 constraint_ueq=lambda p: p[6] - p[2]
 ga = GA(func=loss_func,
         n_dim=11,
-        size_pop=40,
-        max_iter=1000,
-        prob_mut=0.001,
+        size_pop=100,
+        max_iter=100,
+        prob_mut=0.01,
         lb=[0,   0,   0,    0,   0,   0,   0,    0.1,  1,  1,  1],
         ub=[0.3, 0.3, 0.02, 0.9, 0.9, 0.9, 0.02, 0.9, 30, 30, 30],
         precision=[1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1, 1, 1],
         constraint_eq=[constraint_ueq])
 best_param, best_loss = ga.run()
+# best_result_log.info(f'param: {best_param} \n loss: {best_loss}')
 print('best_param:', best_param, '\n', 'best_loss:', best_loss)
