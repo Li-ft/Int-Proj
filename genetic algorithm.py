@@ -49,8 +49,8 @@ def loss_func(p):
     p_latent_2infectious, p_infectious_2severe, p_severe_2dead, \
     leisure_p_constraint, sickbed_buff, \
     severe_dur, infectious_dur, origin_infected_num = p
-    assert leisure_p_constraint <= leisure_p
     print(p)
+    assert leisure_p_constraint <= leisure_p
     abm = ABMPandemic(begin_date=begin_date,
                       end_date=end_date,
                       agents_df=agents_df,
@@ -80,15 +80,15 @@ def loss_func(p):
 
     return mse(train_value, real_value)
 
-
+constraint_ueq=lambda p: p[6] - p[2]
 ga = GA(func=loss_func,
         n_dim=11,
         size_pop=40,
         max_iter=1000,
         prob_mut=0.001,
-        lb=[0,   0,   0.1,  0,   0,   0,   0.1,  0.1,  1,  1,  1],
-        ub=[0.3, 0.3, 0.12, 0.9, 0.9, 0.9, 0.12, 0.9, 30, 30, 30],
+        lb=[0,   0,   0,    0,   0,   0,   0,    0.1,  1,  1,  1],
+        ub=[0.3, 0.3, 0.02, 0.9, 0.9, 0.9, 0.02, 0.9, 30, 30, 30],
         precision=[1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1, 1, 1],
-        constraint_ueq=[lambda p: p[2] - p[6]])
-best_x, best_y = ga.run()
-print('best_x:', best_x, '\n', 'best_y:', best_y)
+        constraint_eq=[constraint_ueq])
+best_param, best_loss = ga.run()
+print('best_param:', best_param, '\n', 'best_loss:', best_loss)
