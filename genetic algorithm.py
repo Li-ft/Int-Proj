@@ -71,7 +71,7 @@ def loss_func(p):
                       infectious_dur=int(infectious_dur),
                       origin_infected_num=int(origin_infected_num))
     train_value=list(abm.run())
-    real_value=covid_data_df.loc[begin_date:end_date,'Daily Death']
+    real_value=covid_data_df.loc[begin_date:end_date,'Total Death']
     if (residual_num := len(real_value) - len(train_value)) > 0:
         train_value.extend([0] * residual_num)
     else:
