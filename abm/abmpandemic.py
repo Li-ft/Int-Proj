@@ -43,23 +43,24 @@ class ABMPandemic:
         self.end_date = end_date
 
         # self.infected_df = agents_df.sample(origin_infected_num)
-        assert max(list(agents_df.index)) == agents_df.index[-1]
+        # assert max(list(agents_df.index)) == agents_df.index[-1]
         agents_df.loc[:, 'position_index'] = -1
         agents_df.loc[:, 'covid_state'] = 0
         agents_df.loc[:, 'leisure_timer'] = -1
         agents_df.loc[:, 'covid_state_timer'] = -1
         agents_df.loc[:, 'quarantine'] = 0
+        agents_df.loc[:, 'space_acreage'] = 0
         agents_df[['position_index', 'covid_state', 'leisure_timer', 'covid_state_timer', 'quarantine']] = \
             agents_df[['position_index', 'covid_state', 'leisure_timer', 'covid_state_timer', 'quarantine']].astype(int)
         # agents_df['infect_buff'] = 1
-        assert len(agents_df.index) == len(set(agents_df.index))
+        # assert len(agents_df.index) == len(set(agents_df.index))
         self.susceptible_df = agents_df
         self.infected_df = pd.DataFrame(columns=agents_df.columns)
         self.step_per_hour = step_per_hour
         self.step_per_day = step_per_hour * 24
         self.handle_new_infected(agents_df.sample(origin_infected_num).index)
         all_staff_idx = list(chain.from_iterable(space_df['staffs_idx']))
-        assert len(all_staff_idx) == len(set(all_staff_idx))
+        # assert len(all_staff_idx) == len(set(all_staff_idx))
         self.space_df = space_df
         self.space_df['susceptible_inside'] = np.empty((len(self.space_df), 0)).tolist()
         self.space_df['infector_inside'] = np.empty((len(self.space_df), 0)).tolist()
@@ -94,6 +95,8 @@ class ABMPandemic:
         # self.immune_dur = immune_dur
         # self.immune_infect_rate = immune_infect_p
         self.policy_df = policy_df
+        self.space_type_limit = None
+        self.limit_hour=None
         self.leisure_p_constraint = leisure_p_constraint
         self.daily_positive_series = daily_positive_series
 
@@ -115,13 +118,14 @@ class ABMPandemic:
         self.step_count = 0
 
         self.not_work_workers_idx = []
-        self.not_work_workers_identity=[]
+        self.not_work_workers_identity = []
 
     def step(self, day_type: str, hour: int):
         log.info(f'step: {self.step_count}, hour: {hour}')
+        is_rest_time = False
         if day_type == 'workday':
             if hour < 8:
-                pass
+                is_rest_time = True
             if hour == 8:
                 self.commute_infect(hour)
             if 9 <= hour < 13:
@@ -138,11 +142,13 @@ class ABMPandemic:
             if 19 <= hour < 23:
                 self.leisure()
             if hour == 23:
-                pass
+                is_rest_time = True
         if day_type == 'holiday':
             if 9 <= hour < 23:
                 self.leisure()
-        self.before_step_end(hour)
+            else:
+                is_rest_time = True
+        self.before_step_end(is_rest_time)
 
     def infection_balance(self):
         """calculate the statistical pandemic data for each day"""
@@ -310,20 +316,23 @@ class ABMPandemic:
         self.covid_test(today_positive_num)
         self.infection_balance()
 
-        self.restore_policy_ctrl()
+        # self.restore_policy_ctrl()
 
-    def before_step_end(self, hour: int):
+    def before_step_end(self, is_rest_time: bool):
         self.covid_state_timer_decrease()
-        self.leisure_time_decrease()
-        self.infect()
-        susceptible_num = len(self.susceptible_df)
-        infected_num = len(self.infected_df)
-        infectious_num = len(self.infected_df.query('covid_state>1'))
-        recovery_num = len(self.recovery_df)
-        self.infect_proportion = round(infectious_num / (infected_num + susceptible_num + recovery_num), 6)
-        log.debug(f'infect proportion: {self.infect_proportion}')
-        log.debug(f'total infected: {len(self.infected_df)}')
-        log.debug(f'total recover: {len(self.recovery_df)}')
+        if is_rest_time:
+            pass
+        else:
+            self.leisure_time_decrease()
+            self.infect()
+            susceptible_num = len(self.susceptible_df)
+            infected_num = len(self.infected_df)
+            infectious_num = len(self.infected_df.query('covid_state>1'))
+            recovery_num = len(self.recovery_df)
+            self.infect_proportion = round(infectious_num / (infected_num + susceptible_num + recovery_num), 6)
+            log.debug(f'infect proportion: {self.infect_proportion}')
+            log.debug(f'total infected: {len(self.infected_df)}')
+            log.debug(f'total recover: {len(self.recovery_df)}')
 
         self.step_count += 1
 
@@ -358,39 +367,49 @@ class ABMPandemic:
         #
         # self.handle_new_infected(new_infected_idx)
         # old code ends
-        space_df_copy = self.space_df
-
-        infects_p = []
+        # space_df_copy = self.space_df
+        #
+        # infects_p = []
+        # infect_p = self.infect_p
+        # infect_proportion = self.infect_proportion
+        # for _, row in space_df_copy[['susceptible_inside', 'acreage']].iterrows():
+        #     susceptible_lst, acreage = row
+        #     if (num := len(susceptible_lst)) > 0:
+        #         p = 1 if (a := round(1 / acreage * infect_p * infect_proportion, 6)) > 0 else a
+        #         infects_p.extend([p] * num)
+        #     else:
+        #         continue
+        #
+        # all_ppl_inside = list(chain.from_iterable(space_df_copy['susceptible_inside']))
+        # # print(len(all_ppl_inside))
+        # exposed_idx = set(all_ppl_inside).intersection(set(self.susceptible_df.index))
+        # # print(len(exposed_idx))
+        #
+        # # print(len(exposed_idx), len(infects_p))
+        # # assert len(exposed_idx) == len(infects_p)
+        #
+        # df = pd.DataFrame()
+        # df['infect_chance'] = infects_p
+        # df.index = all_ppl_inside
+        # df = df.loc[exposed_idx]
+        # # df.index = exposed_idx
+        # # randomly decide who will be infected
+        # df.loc[:, 'is_infected'] = np.random.binomial(1, df['infect_chance'], len(df))
+        # # finally:
+        # #     df['infect_chance'].to_csv(r'C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\logs\data.csv')
+        #
+        # new_infected_idx = df.query('is_infected == 1').index
+        susceptible_df_copy = self.susceptible_df.copy()
+        col_len = len(susceptible_df_copy.columns)
         infect_p = self.infect_p
         infect_proportion = self.infect_proportion
-        for _, row in space_df_copy[['susceptible_inside', 'acreage']].iterrows():
-            susceptible_lst, acreage = row
-            if (num := len(susceptible_lst)) > 0:
-                p = 1 if (a := round(1 / acreage * infect_p * infect_proportion, 6)) > 0 else a
-                infects_p.extend([p] * num)
-            else:
-                continue
-
-        all_ppl_inside = list(chain.from_iterable(space_df_copy['susceptible_inside']))
-        # print(len(all_ppl_inside))
-        exposed_idx = set(all_ppl_inside).intersection(set(self.susceptible_df.index))
-        # print(len(exposed_idx))
-
-        # print(len(exposed_idx), len(infects_p))
-        # assert len(exposed_idx) == len(infects_p)
-
-        df = pd.DataFrame()
-        df['infect_chance'] = infects_p
-        df.index = all_ppl_inside
-        df = df.loc[exposed_idx]
-        # df.index = exposed_idx
-        # randomly decide who will be infected
-        df.loc[:, 'is_infected'] = np.random.binomial(1, df['infect_chance'], len(df))
-        # finally:
-        #     df['infect_chance'].to_csv(r'C:\Users\maqly\Documents\lectures\Project\interdisciplinary_proj\logs\data.csv')
-
-        new_infected_idx = df.query('is_infected == 1').index
-
+        exposed_idx = susceptible_df_copy.query('space_acreage>0').index
+        susceptible_df_copy.loc[susceptible_df_copy['space_acreage'] > 1, 'space_acreage'] = 1
+        susceptible_df_copy.loc[exposed_idx, 'infect_chance'] = 1 / susceptible_df_copy.loc[
+            exposed_idx, 'space_acreage'] * infect_p * infect_proportion
+        susceptible_df_copy.loc[exposed_idx, 'is_infected'] = np.random.binomial(1, susceptible_df_copy.loc[
+            exposed_idx, 'infect_chance'], len(exposed_idx))
+        new_infected_idx = susceptible_df_copy.query('is_infected == 1').index
         self.handle_new_infected(new_infected_idx)
 
     def covid_state_timer_decrease(self):
@@ -490,7 +509,7 @@ class ABMPandemic:
     def handle_new_infected(self, new_infected_agent_idx: Collection[int]):
         """define the infected parameters such as the time for the next stage"""
         log.debug(f'new infected: {len(new_infected_agent_idx)}')
-        assert len(new_infected_agent_idx) == len(set(new_infected_agent_idx))
+        # assert len(new_infected_agent_idx) == len(set(new_infected_agent_idx))
         # print(f'new infected: {new_infected_agent_idx}')
         new_infected_df = self.susceptible_df.loc[new_infected_agent_idx]
         new_infected_df.loc[:, 'covid_state'] = 1
@@ -514,8 +533,8 @@ class ABMPandemic:
     #     return 1
 
     def assign_sickbed(self, agent_idx: Collection[int]):
-        assert len(agent_idx) == len(set(agent_idx))
-        agent_idx=list(set(agent_idx).difference(set(self.sickbed_occupy_list)))
+        # assert len(agent_idx) == len(set(agent_idx))
+        agent_idx = list(set(agent_idx).difference(set(self.sickbed_occupy_list)))
         # no action if the hospital is full
         if len(self.sickbed_occupy_list) == self.sickbed_num:
             return agent_idx
@@ -541,9 +560,9 @@ class ABMPandemic:
 
     def release_sickbed(self, agent_idx: Collection[int]):
         agent_idx_set = set(agent_idx)
-        assert len(agent_idx_set) == len(agent_idx)
+        # assert len(agent_idx_set) == len(agent_idx)
         sickbed_occupy_set = set(self.sickbed_occupy_list)
-        assert len(sickbed_occupy_set) == len(self.sickbed_occupy_list)
+        # assert len(sickbed_occupy_set) == len(self.sickbed_occupy_list)
         # log.debug(f'release sickbed: {agent_idx_set}')
         people_sickbed_idx = agent_idx_set.intersection(sickbed_occupy_set, set(self.infected_df.index))
         self.sickbed_occupy_list = list(sickbed_occupy_set.difference(agent_idx_set))
@@ -578,15 +597,29 @@ class ABMPandemic:
 
     def policy_ctrl(self, date, hour: int):
         """realize the influence of the policy"""
-        biz_pt_type_constraint = self.policy_df.loc[date, 'type']
-        restricted_hour = self.policy_df.loc[date, 'from']
+        cur_limit_hour = self.policy_df.loc[date, 'from']
+        cur_limit_type = self.policy_df.loc[date, 'type']
+        # log.warning(f'{cur_limit_type} {cur_limit_hour}')
+        # log.warning(f'{self.space_type_limit} {self.limit_hour}')
+        cur_limit_type=None if pd.isna(cur_limit_type) else cur_limit_type
+        cur_limit_hour=None if pd.isna(cur_limit_hour) else cur_limit_hour
+        last_limit_type=None if pd.isna(a:=self.space_type_limit) else a
+        last_limit_hour=None if pd.isna(a:=self.limit_hour) else a
+        if cur_limit_type==last_limit_type and cur_limit_hour==last_limit_hour:
+            return
+        else:
+            self.space_type_limit = cur_limit_type
+            self.limit_hour = cur_limit_hour
+            self.restore_policy_ctrl()
+        space_type_limit = cur_limit_type
+        limit_hour = cur_limit_hour
 
-        if not pd.isna(biz_pt_type_constraint):
+        if not pd.isna(space_type_limit):
 
-            if not pd.isna(restricted_hour):
-                if hour ==restricted_hour:
+            if not pd.isna(limit_hour):
+                if hour == limit_hour:
                     # get spaces with constraint
-                    self.space_constraint_df = self.space_df.query(f'type=={biz_pt_type_constraint}')
+                    self.space_constraint_df = self.space_df.query(f'type=={space_type_limit}')
                     # when the constraint space is closed, all clients leave the space
                     ppl_leave_idx = list(chain.from_iterable(self.space_constraint_df['susceptible_inside']))
                     self.leave_space(ppl_leave_idx)
@@ -599,7 +632,7 @@ class ABMPandemic:
                 if hour == 0:
                     log.debug('leisure limited')
                     # get spaces with constraint
-                    self.space_constraint_df = self.space_df.query(f'type=={biz_pt_type_constraint}')
+                    self.space_constraint_df = self.space_df.query(f'type=={space_type_limit}')
 
                     # when the constraint space is closed, all clients leave the space
                     ppl_leave_idx = list(chain.from_iterable(self.space_constraint_df['susceptible_inside']))
@@ -609,7 +642,7 @@ class ABMPandemic:
                     # the leisure desire of people will decrease accordingly
                     self.leisure_p = self.leisure_p_constraint
 
-            if len(self.space_constraint_df)>0:
+            if len(self.space_constraint_df) > 0:
                 not_work_workers = set(chain.from_iterable(self.space_constraint_df['staffs_idx'])) \
                     .intersection(set(self.susceptible_df.index))
                 self.not_work_workers_idx = not_work_workers
@@ -617,13 +650,13 @@ class ABMPandemic:
                 self.susceptible_df.loc[not_work_workers, 'identity'] = 5
 
         # # restricted_type =
-        # if hour == restricted_hour:
+        # if hour == limit_hour:
         #     log.debug('leisure limited')
-        #     biz_pt_type_constraint = self.policy_df.loc[date, 'type']
+        #     space_type_limit = self.policy_df.loc[date, 'type']
         #     # the constraint business type should be a int
-        #     if not pd.isna(biz_pt_type_constraint):
+        #     if not pd.isna(space_type_limit):
         #         # get the restricted business points
-        #         self.space_constraint_df = self.space_df.query(f'type=={biz_pt_type_constraint}')
+        #         self.space_constraint_df = self.space_df.query(f'type=={space_type_limit}')
         #         ppl_leave_idx = list(chain.from_iterable(self.space_constraint_df['susceptible_inside']))
         #         self.leave_space(ppl_leave_idx)
         #         # remove them from the business point list
@@ -680,86 +713,89 @@ class ABMPandemic:
         self.release_sickbed(dead_idx)
 
     def restore_policy_ctrl(self):
+        log.warning('restore policy control')
         self.leisure_p = self.leisure_p_normal
         # self.space_df = pd.concat([self.space_df, self.space_constraint_df])
-        self.space_df=self.space_df.append(self.space_constraint_df)
+        self.space_df = self.space_df.append(self.space_constraint_df)
         # self.space_df.loc[self.space_constraint_df.index]=self.space_constraint_df
-        self.space_constraint_df=pd.DataFrame(columns=self.space_df.columns)
+        self.space_constraint_df = pd.DataFrame(columns=self.space_df.columns)
 
-        if len(self.not_work_workers_idx)>0 and len(self.not_work_workers_identity)>0:
-            df=pd.DataFrame()
-            df['identity']=self.not_work_workers_identity
-            df.index=self.not_work_workers_idx
-            susceptible_idx=set(df.index).intersection(set(self.susceptible_df.index))
-            infected_idx=set(df.index).intersection(set(self.infected_df.index))
-            assert len(susceptible_idx)+len(infected_idx)==len(df)
-            self.susceptible_df.loc[susceptible_idx, 'identity']=df.loc[susceptible_idx, 'identity']
-            self.infected_df.loc[infected_idx, 'identity']=df.loc[infected_idx, 'identity']
+        if len(self.not_work_workers_idx) > 0 and len(self.not_work_workers_identity) > 0:
+            df = pd.DataFrame()
+            df['identity'] = self.not_work_workers_identity
+            df.index = self.not_work_workers_idx
+            susceptible_idx = set(df.index).intersection(set(self.susceptible_df.index))
+            infected_idx = set(df.index).intersection(set(self.infected_df.index))
+            # assert len(susceptible_idx) + len(infected_idx) == len(df)
+            self.susceptible_df.loc[susceptible_idx, 'identity'] = df.loc[susceptible_idx, 'identity']
+            self.infected_df.loc[infected_idx, 'identity'] = df.loc[infected_idx, 'identity']
 
     def leave_space(self, agent_idx: Collection[int]):
         # log.debug('leave space')
-        space_df_copy = self.space_df.copy()
-        susceptible_df_copy = self.susceptible_df.copy()
+        # space_df_copy = self.space_df.copy()
+        # susceptible_df_copy = self.susceptible_df.copy()
 
-        susceptible_idx = set(susceptible_df_copy.index).intersection(set(agent_idx))
+        susceptible_idx = set(self.susceptible_df.index).intersection(set(agent_idx))
+        self.susceptible_df.loc[susceptible_idx, 'space_acreage'] = 0
         # infected_idx=set(self.infected_df.index).intersection(set(agent_idx))
-        leaving_series = self.susceptible_df.loc[susceptible_idx, 'position_index']
-        # print(leaving_series)
-
-        for ppl_idx, space_idx in leaving_series.items():
-            # log.debug(f'{ppl_idx} leave {space_idx}')
-            if space_idx == -1:
-                continue
-            space_df_copy.at[space_idx, 'susceptible_inside'].remove(ppl_idx)
-        try:
-            susceptible_df_copy.loc[leaving_series.index, 'position_index'] = -1
-        finally:
-            pass
-            # print(self.infected_df.index)
-        self.space_df = space_df_copy
-        self.susceptible_df = susceptible_df_copy
+        # leaving_series = self.susceptible_df.loc[susceptible_idx, 'position_index']
+        # # print(leaving_series)
+        #
+        # for ppl_idx, space_idx in leaving_series.items():
+        #     # log.debug(f'{ppl_idx} leave {space_idx}')
+        #     if space_idx == -1:
+        #         continue
+        #     space_df_copy.at[space_idx, 'susceptible_inside'].remove(ppl_idx)
+        # try:
+        #     susceptible_df_copy.loc[leaving_series.index, 'position_index'] = -1
+        # finally:
+        #     pass
+        #     # print(self.infected_df.index)
+        # self.space_df = space_df_copy
+        # self.susceptible_df = susceptible_df_copy
 
     def enter_space(self,
                     agent_idx: Collection[int],
                     space_idx: Collection[int],
                     col_name: str):
         # log.info('enter space')
-        assert len(agent_idx) == len(set(agent_idx))
-        assert len(agent_idx) == len(space_idx)
+        # assert len(agent_idx) == len(set(agent_idx))
+        # assert len(agent_idx) == len(space_idx)
 
         df = pd.DataFrame()
         df.loc[:, 'space_idx'] = space_idx
         df.index = agent_idx
 
         susceptible_idx = set(agent_idx).intersection(set(self.susceptible_df.index))
-        df = df.loc[susceptible_idx, :]
+        agent_idx = df.loc[susceptible_idx, 'space_idx']
 
-        space_df_copy = self.space_df.copy()
-        for agent, space in df['space_idx'].items():
-            # if type(space_df_copy.at[space, col_name]) is not list:
-            #     log.error(type(space_df_copy.at[space, col_name]))
-            #     log.error(space_df_copy.at[space, col_name])
-            #     # log.error(space_df_copy[col_name].dtype)
-            #     # space_df_copy[col_name]=space_df_copy[col_name].astype(object)
-            #     print(space, col_name)
-            #
-            #     space_df_copy.at[28825, 'susceptible_inside']= [1,2,3]
-            #     print(space_df_copy.at[28825, 'susceptible_inside'])
-            #     space_df_copy.at[space, col_name]=space_df_copy.at[space, col_name].values.tolist()
-            #     log.warning(type(space_df_copy.at[space, col_name]))
-                # space_df_copy.at[space, col_name]
-            space_df_copy.at[space, col_name].append(agent)
-
-        # for agent, space in zip(agent_idx, space_idx):
-        #     # log.debug(f'{agent} enter {space}')
-        #     try:
-        #         space_df_copy.at[space, col_name].append(agent)
-        #     except KeyError:
-        #         print(agent, space)
-        #         print(space_idx)
-        #         print(agent_idx)
-        self.space_df = space_df_copy
-        # try:
-        self.susceptible_df.loc[agent_idx, 'position_index'] = space_idx
+        # space_df_copy = self.space_df.copy()
+        # for agent, space in df['space_idx'].items():
+        #     # if type(space_df_copy.at[space, col_name]) is not list:
+        #     #     log.error(type(space_df_copy.at[space, col_name]))
+        #     #     log.error(space_df_copy.at[space, col_name])
+        #     #     # log.error(space_df_copy[col_name].dtype)
+        #     #     # space_df_copy[col_name]=space_df_copy[col_name].astype(object)
+        #     #     print(space, col_name)
+        #     #
+        #     #     space_df_copy.at[28825, 'susceptible_inside']= [1,2,3]
+        #     #     print(space_df_copy.at[28825, 'susceptible_inside'])
+        #     #     space_df_copy.at[space, col_name]=space_df_copy.at[space, col_name].values.tolist()
+        #     #     log.warning(type(space_df_copy.at[space, col_name]))
+        #     # space_df_copy.at[space, col_name]
+        #     space_df_copy.at[space, col_name].append(agent)
+        #
+        # # for agent, space in zip(agent_idx, space_idx):
+        # #     # log.debug(f'{agent} enter {space}')
+        # #     try:
+        # #         space_df_copy.at[space, col_name].append(agent)
+        # #     except KeyError:
+        # #         print(agent, space)
+        # #         print(space_idx)
+        # #         print(agent_idx)
+        # self.space_df = space_df_copy
+        # # try:
+        # self.susceptible_df.loc[agent_idx, 'position_index'] = space_idx
         # finally:
         #     log.debug(f'infected: {self.susceptible_df.index}')
+        self.susceptible_df.loc[susceptible_idx, 'space_acreage'] = self.space_df.loc[space_idx, 'acreage'].tolist()
