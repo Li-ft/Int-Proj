@@ -94,7 +94,7 @@ ga = GA(func=loss_func,
         max_iter=80,
         prob_mut=0.01,
         lb=[0,   0,   0,    0,   0,   0,   0,    0.1,  24,  24,  1],
-        ub=[0.3, 0.3, 0.02, 0.9, 0.9, 0.9, 0.02, 0.9, 240, 240, 30],
+        ub=[0.3, 0.3, 0.02, 0.9, 0.9, 0.9, 0.02, 0.9, 240, 240, 50],
         precision=[1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1, 1, 1],
         constraint_eq=[constraint_ueq])
 best_param, best_loss = ga.run()
