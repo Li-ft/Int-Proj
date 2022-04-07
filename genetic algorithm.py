@@ -90,8 +90,8 @@ def loss_func(p):
 constraint_ueq=lambda p: p[6] - p[2]
 ga = GA(func=loss_func,
         n_dim=11,
-        size_pop=100,
-        max_iter=100,
+        size_pop=50,
+        max_iter=80,
         prob_mut=0.01,
         lb=[0,   0,   0,    0,   0,   0,   0,    0.1,  24,  24,  1],
         ub=[0.3, 0.3, 0.02, 0.9, 0.9, 0.9, 0.02, 0.9, 240, 240, 30],
