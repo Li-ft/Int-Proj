@@ -54,11 +54,13 @@ def loss_func(p):
     p_latent_2infectious, p_infectious_2severe, p_severe_2dead, \
     leisure_p_constraint, sickbed_buff, \
     severe_dur, infectious_dur, origin_infected_num = p
-
+    log.info(f'params: {p}')
+    agents_df_copy=agents_df.copy()
+    space_df_copy=space_df.copy()
     abm = ABMPandemic(begin_date=begin_date,
                       end_date=end_date,
-                      agents_df=agents_df,
-                      space_df=space_df,
+                      agents_df=agents_df_copy,
+                      space_df=space_df_copy,
                       policy_df=policy_df,
                       holiday_df=holiday_df,
                       daily_positive_series=daily_positive_series,

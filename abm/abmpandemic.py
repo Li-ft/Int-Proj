@@ -41,7 +41,7 @@ class ABMPandemic:
         # self.agents_df = agents_df
         self.begin_date = begin_date
         self.end_date = end_date
-
+        assert len(agents_df)==858052
         # self.infected_df = agents_df.sample(origin_infected_num)
         # assert max(list(agents_df.index)) == agents_df.index[-1]
         agents_df.loc[:, 'position_index'] = -1
@@ -59,7 +59,8 @@ class ABMPandemic:
         self.step_per_hour = step_per_hour
         self.step_per_day = step_per_hour * 24
         self.handle_new_infected(agents_df.sample(origin_infected_num).index)
-        all_staff_idx = list(chain.from_iterable(space_df['staffs_idx']))
+
+        # all_staff_idx = list(chain.from_iterable(space_df['staffs_idx']))
         # assert len(all_staff_idx) == len(set(all_staff_idx))
         self.space_df = space_df
         self.space_df['susceptible_inside'] = np.empty((len(self.space_df), 0)).tolist()
