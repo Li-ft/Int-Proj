@@ -59,7 +59,7 @@ class ABMPandemic:
         self.infected_df = pd.DataFrame(columns=agents_df.columns)
         self.step_per_hour = step_per_hour
         self.step_per_day = step_per_hour * 24
-        self.handle_new_infected(agents_df.sample(origin_infected_num).index)
+        self.handle_new_infected(agents_df.sample(origin_infected_num, random_state=seed).index)
 
         # all_staff_idx = list(chain.from_iterable(space_df['staffs_idx']))
         # assert len(all_staff_idx) == len(set(all_staff_idx))
@@ -584,7 +584,7 @@ class ABMPandemic:
 
         if test_positive_num > len(self.infected_df):
             test_positive_num = len(self.infected_df)
-        tested_agents = self.infected_df['covid_state'].sample(test_positive_num)
+        tested_agents = self.infected_df['covid_state'].sample(test_positive_num, random_state=seed)
         positive_idx = tested_agents[tested_agents > 0].index
         normal_idx = tested_agents[tested_agents == 2].index
         # severe_idx = tested_agents[tested_agents == 3].index
