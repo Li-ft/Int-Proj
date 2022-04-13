@@ -9,6 +9,7 @@ from logs.config import log_config
 # p: probability
 log = log_config('abm', r'.\logs\log.txt')
 dead_data_num = 192
+seed=2019
 
 
 class ABMPandemic:
@@ -215,6 +216,7 @@ class ABMPandemic:
 
         commute_people_df = self.susceptible_df.query('1<=identity<4 & use_pt==1')
         # commute_people_df = self.agents_df.loc[commute_people_idx]
+        np.random.seed(seed)
         commute_people_df.loc[:, 'covid_state'] = np.random.choice([0, 1],
                                                                    len(commute_people_df),
                                                                    p=[1 - (self.tp_infect_p * self.infect_proportion),
@@ -408,6 +410,7 @@ class ABMPandemic:
         susceptible_df_copy.loc[susceptible_df_copy['space_acreage'] > 1, 'space_acreage'] = 1
         susceptible_df_copy.loc[exposed_idx, 'infect_chance'] = 1 / susceptible_df_copy.loc[
             exposed_idx, 'space_acreage'] * infect_p * infect_proportion
+        np.random.seed(seed)
         susceptible_df_copy.loc[exposed_idx, 'is_infected'] = np.random.binomial(1, susceptible_df_copy.loc[
             exposed_idx, 'infect_chance'], len(exposed_idx))
         new_infected_idx = susceptible_df_copy.query('is_infected == 1').index
@@ -419,6 +422,7 @@ class ABMPandemic:
 
         # latent
         latents_end_df = infected_df_copy.query('covid_state==1 & covid_state_timer==0')
+        np.random.seed(seed)
         latents_end_df.loc[:, 'get_worse'] = np.random.binomial(1,
                                                                 self.p_latent_2infectious * latents_end_df[
                                                                     'infect_buff'],
@@ -435,6 +439,7 @@ class ABMPandemic:
 
         # infectious
         infectious_end_df = infected_df_copy.query('covid_state==2 & covid_state_timer==0')
+        np.random.seed(seed)
         infectious_end_df.loc[:, 'get_worse'] = np.random.binomial(1,
                                                                    self.p_infectious_2severe * infectious_end_df[
                                                                        'infect_buff'],
@@ -456,6 +461,7 @@ class ABMPandemic:
 
         # severe
         severe_end_df = infected_df_copy.query('covid_state==3 & covid_state_timer==0')
+        np.random.seed(seed)
         severe_end_df.loc[:, 'get_worse'] = np.random.binomial(1,
                                                                self.severe_2deceased * severe_end_df['infect_buff'],
                                                                len(severe_end_df))
@@ -515,6 +521,7 @@ class ABMPandemic:
         new_infected_df = self.susceptible_df.loc[new_infected_agent_idx]
         new_infected_df.loc[:, 'covid_state'] = 1
         # the transition time from latent to normal symptom is a gamma distribution
+        np.random.seed(seed)
         new_infected_df.loc[:, 'covid_state_timer'] = np.random.gamma(3.8, 0.66, len(new_infected_df))
         new_infected_df.loc[:, 'covid_state_timer'] = new_infected_df['covid_state_timer'].apply(
             lambda x: int(x * self.step_per_day))
@@ -669,18 +676,21 @@ class ABMPandemic:
                              people_can_leisure_df: pd.DataFrame,
                              leisure_space_idx: Iterable[int],
                              col_name: str):
+        np.random.seed(seed)
         people_can_leisure_df.loc[:, 'if_leisure'] = np.random.choice([0, 1],
                                                                       len(people_can_leisure_df),
                                                                       p=[1 - self.leisure_p, self.leisure_p])
         # get people who decide to have leisure
         people_leisure_df = people_can_leisure_df.query('if_leisure == 1')
         # randomly choose the leisure place for each person who decided to take leisure
+        np.random.seed(seed)
         biz_pt_with_susceptible_idx = np.random.choice(leisure_space_idx, len(people_leisure_df))
 
         self.enter_space(people_leisure_df.index, biz_pt_with_susceptible_idx, col_name)
         # set a time that the agent will leave the business point
         # people_leisure_df['leisure_timer'] = np.random.randint(low=1, high=3 * self.step_per_hour,
         #                                                        size=len(people_leisure_df))
+        np.random.seed(seed)
         self.susceptible_df.loc[people_leisure_df.index, 'leisure_timer'] = np.random.randint(low=1,
                                                                                               high=3 * self.step_per_hour,
                                                                                               size=len(
