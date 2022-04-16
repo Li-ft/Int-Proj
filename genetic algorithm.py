@@ -54,7 +54,7 @@ def loss_func(p):
     severe_dur, infectious_dur, origin_infected_num = p
     if leisure_p < leisure_p_constraint:
         return 999999999
-    log.info(f'params: {list(p)}')
+    # log.info(f'params:\n {list(p)}')
     agents_df_copy = agents_df.copy()
     space_df_copy = space_df.copy()
     abm = ABMPandemic(begin_date=begin_date,
@@ -85,8 +85,8 @@ def loss_func(p):
         train_value = train_value[:len(real_value)]
 
     result = mse(train_value, real_value)
-    log.info(f'params: {list(p)}')
-    log.info(f'error: {result}')
+    log.info(f'params:\n {list(p)}')
+    log.info(f'error:\n {result}')
     return result
 
 

@@ -13,10 +13,10 @@ def log_config(log_name: str, log_path:str):
     LOG_LEVEL = logging.DEBUG
     CONSOLE_LEVEL= logging.INFO
 
-    # LOGFORMAT = "%(log_color)s%(asctime)s %(levelname)-8s%(reset)s | %(log_color)s%(message)s%(reset)s"
-    LOGFORMAT = "%(log_color)s%(levelname)s%(reset)s %(log_color)s%(message)s%(reset)s"
+    # CONSOLE_LOG_FORMAT = "%(log_color)s%(asctime)s %(levelname)-8s%(reset)s | %(log_color)s%(message)s%(reset)s"
+    CONSOLE_LOG_FORMAT = "%(log_color)s%(levelname)s%(reset)s %(log_color)s%(message)s%(reset)s"
     logging.root.setLevel(LOG_LEVEL)
-    formatter = ColoredFormatter(LOGFORMAT,
+    console_formatter = ColoredFormatter(CONSOLE_LOG_FORMAT,
                                  log_colors={
                                      'DEBUG': 'cyan',
                                      'INFO': 'green',
@@ -27,12 +27,13 @@ def log_config(log_name: str, log_path:str):
     # console
     console = logging.StreamHandler()
     console.setLevel(CONSOLE_LEVEL)
-    console.setFormatter(formatter)
+    console.setFormatter(console_formatter)
 
     # log file
     handler = logging.FileHandler(log_path, encoding='UTF-8')
     handler.setLevel(logging.DEBUG)
-    handler.setFormatter(formatter)
+    file_formatter=logging.Formatter("%(message)s")
+    handler.setFormatter(file_formatter)
 
     log = logging.getLogger(log_name)
     log.setLevel(LOG_LEVEL)
