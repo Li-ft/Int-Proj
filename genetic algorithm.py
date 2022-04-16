@@ -7,11 +7,10 @@ from sklearn.metrics import mean_squared_error as mse
 from logs.config import log_config
 
 
-log=log_config('result', r'.\logs\result.txt')
-best_result_log=log_config('best result', r'.\logs\best result.txt')
+log=log_config('result', r'.\logs\result long.txt')
 
 begin_date = '2020-02-22'
-end_date = '2020-03-31'
+end_date = '2020-05-31'
 agents_df = pd.read_csv(r"data\agents.csv",
                         dtype={'home_x': float,
                                'home_y': float,
@@ -54,7 +53,9 @@ def loss_func(p):
     p_latent_2infectious, p_infectious_2severe, p_severe_2dead, \
     leisure_p_constraint, sickbed_buff, \
     severe_dur, infectious_dur, origin_infected_num = p
-    log.info(f'params: {p}')
+    if leisure_p<leisure_p_constraint:
+        return 999999999
+    log.info(f'params: {list(p)}')
     agents_df_copy=agents_df.copy()
     space_df_copy=space_df.copy()
     abm = ABMPandemic(begin_date=begin_date,

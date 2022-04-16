@@ -8,7 +8,9 @@ from logs.config import log_config
 # tp: transport
 # p: probability
 log = log_config('abm', r'.\logs\log.txt')
-dead_data_num = 192
+mask_buff=0.85
+mandatory_mask_begin_date='2020-05-18'
+optional_mask_begin_date='2020-06-02'
 seed=2019
 
 
@@ -604,6 +606,11 @@ class ABMPandemic:
         # self.add_2severe_bed(severe_idx)
 
     def policy_ctrl(self, date, hour: int):
+        if date==pd.to_datetime(mandatory_mask_begin_date) and hour==0:
+            self.mandatory_mask()
+        if date==pd.to_datetime(optional_mask_begin_date) and hour ==0:
+            self.optional_mask()
+
         """realize the influence of the policy"""
         cur_limit_hour = self.policy_df.loc[date, 'from']
         cur_limit_type = self.policy_df.loc[date, 'type']
@@ -810,3 +817,15 @@ class ABMPandemic:
         # finally:
         #     log.debug(f'infected: {self.susceptible_df.index}')
         self.susceptible_df.loc[susceptible_idx, 'space_acreage'] = self.space_df.loc[space_idx, 'acreage'].tolist()
+
+    def mandatory_mask(self):
+        log.warning('mandatory mask')
+        mandatory_mask_ppl_idx=chain.from_iterable((self.space_df.query('type<2'))['staffs_idx'])
+        mandatory_mask_ppl_idx = set(mandatory_mask_ppl_idx).intersection(set(self.susceptible_df.index))
+        self.susceptible_df.loc[mandatory_mask_ppl_idx,'infect_buff']*=mask_buff
+
+    def optional_mask(self):
+        log.warning('optional mask')
+        mandatory_mask_ppl_idx = chain.from_iterable((self.space_df.query('type<2'))['staffs_idx'])
+        mandatory_mask_ppl_idx=set(mandatory_mask_ppl_idx).intersection(set(self.susceptible_df.index))
+        self.susceptible_df.loc[mandatory_mask_ppl_idx,'infect_buff']/=mask_buff
