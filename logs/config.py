@@ -2,13 +2,6 @@ from colorlog import ColoredFormatter
 import logging
 
 
-
-# log.debug("This is debug.")
-# log.info("This is info.")
-# log.warning("This is warning.")
-# log.error("This is error.")
-# log.critical("This is critical.")
-
 def log_config(log_name: str, log_path:str):
     LOG_LEVEL = logging.DEBUG
     CONSOLE_LEVEL= logging.INFO

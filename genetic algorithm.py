@@ -4,12 +4,12 @@ from abm.abmpandemic import ABMPandemic
 from sko.GA import GA
 from sklearn.metrics import mean_squared_error as mse
 from logs.config import log_config
-from sko.tools import set_run_mode
+# from sko.tools import set_run_mode
 
 log = log_config('result', r'.\logs\result.txt')
 
 begin_date = '2020-02-22'
-end_date = '2020-05-31'
+end_date = '2020-04-30'
 agents_df = pd.read_csv(r"data\agents.csv",
                         dtype={'home_x': float,
                                'home_y': float,
@@ -90,7 +90,7 @@ def loss_func(p):
     return result
 
 
-set_run_mode(loss_func, 'multiprocessing')
+# set_run_mode(loss_func, 'multiprocessing')
 constraint_ueq = lambda p: p[6] - p[2]
 ga = GA(func=loss_func,
         n_dim=11,
