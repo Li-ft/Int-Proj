@@ -125,7 +125,7 @@ class ABMPandemic:
         self.not_work_workers_identity = []
 
     def step(self, day_type: str, hour: int):
-        log.info(f'step: {self.step_count}, hour: {hour}')
+        # log.info(f'step: {self.step_count}, hour: {hour}')
         is_rest_time = False
         if day_type == 'workday':
             if hour < 8:
@@ -211,7 +211,7 @@ class ABMPandemic:
         # 0: walk or drive or ride to the working place
         # 1: use the public transport
         if hour == 18:
-            log.info('leave work/study place')
+            log.debug('leave work/study place')
             susceptible_leave_idx = self.susceptible_df.query('1<=identity<4').index
             # log.debug(f'off work: {susceptible_leave_idx}')
             self.leave_space(susceptible_leave_idx)
@@ -226,7 +226,7 @@ class ABMPandemic:
         new_infected_idx = commute_people_df.query('covid_state==1').index
         self.handle_new_infected(new_infected_idx)
         if hour == 8:
-            log.info('enter work/study place')
+            log.debug('enter work/study place')
             susceptible_work_df = self.susceptible_df.query('1<=identity<4')
 
             self.enter_space(susceptible_work_df.index,
@@ -582,7 +582,7 @@ class ABMPandemic:
         """only consider the positive cases, because the negative cases doesn't have any influence"""
         # if test_positive_num>len(self.infected_df):
         #     test_positive_num=len(self.infected_df)
-        log.info(f'{self.date} new positive {test_positive_num}')
+        # log.info(f'{self.date} new positive {test_positive_num}')
 
         if test_positive_num > len(self.infected_df):
             test_positive_num = len(self.infected_df)
