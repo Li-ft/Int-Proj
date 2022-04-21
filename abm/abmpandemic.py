@@ -410,8 +410,7 @@ class ABMPandemic:
         exposed_idx = susceptible_df_copy.query('space_acreage>0').index
         # susceptible_df_copy.loc[susceptible_df_copy['space_acreage'] > 1, 'space_acreage'] = 1
         # compute the infect chance based on the average number of infected people on 1 m2 space
-        susceptible_df_copy.loc[exposed_idx, 'infect_chance'] = 1 / susceptible_df_copy.loc[
-            exposed_idx, 'space_acreage'] * infect_p * infect_proportion
+        susceptible_df_copy.loc[exposed_idx, 'infect_chance'] = infect_p * infect_proportion
         # decide if the exposed people are infected based on the infect chance
         np.random.seed(seed)
         susceptible_df_copy.loc[exposed_idx, 'is_infected'] = np.random.binomial(1, susceptible_df_copy.loc[
