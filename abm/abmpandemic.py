@@ -332,7 +332,7 @@ class ABMPandemic:
             self.infect()
             susceptible_num = len(self.susceptible_df)
             infected_num = len(self.infected_df)
-            infectious_num = len(self.infected_df.query('covid_state>1'))
+            infectious_num = len(self.infected_df.query('covid_state>1 & quarantine==0'))
             recovery_num = len(self.recovery_df)
             self.infect_proportion = round(infectious_num / (infected_num + susceptible_num + recovery_num), 6)
             log.debug(f'infect proportion: {self.infect_proportion}')
