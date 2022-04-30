@@ -52,6 +52,7 @@ def loss_func(p):
     p_latent_2infectious, p_infectious_2severe, p_severe_2dead, \
     leisure_p_constraint, sickbed_buff, \
     severe_dur, infectious_dur, origin_infected_num = p
+    print(list(p))
     if leisure_p < leisure_p_constraint:
         return 999999999
     # log.info(f'params:\n {list(p)}')
@@ -77,17 +78,18 @@ def loss_func(p):
                       severe_dur=int(severe_dur),
                       infectious_dur=int(infectious_dur),
                       origin_infected_num=int(origin_infected_num))
-    train_value = list(abm.run())
+    result, _ = abm.run()
+    train_value = list(result['dead'])
     real_value = covid_data_df.loc[begin_date:end_date, 'Total Death']
     if (residual_num := len(real_value) - len(train_value)) > 0:
         train_value.extend([0] * residual_num)
     else:
         train_value = train_value[:len(real_value)]
 
-    result = mse(train_value, real_value)
+    error = mse(train_value, real_value)
     log.info(f'params:\n {list(p)}')
-    log.info(f'error:\n {result}')
-    return result
+    log.info(f'error:\n {error}')
+    return error
 
 
 set_run_mode(loss_func, 'multiprocessing')
@@ -97,11 +99,11 @@ ga = GA(func=loss_func,
         size_pop=50,
         max_iter=80,
         prob_mut=0.05,
-        lb=[0, 0,   0,   0.1, 0,   0,   0,   0.1,  24,  24,   1],
+        lb=[0, 0, 0, 0.1, 0, 0, 0, 0.1, 24, 24, 1],
         ub=[1, 0.5, 0.1, 0.9, 0.5, 0.9, 0.1, 0.9, 240, 240, 200],
         precision=[1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1, 1, 1],
         constraint_eq=[constraint_ueq])
-best_param, best_loss = ga.run()
+best_param, best_loss = ga.run(5)
 # best_result_log.info(f'param: {best_param} \n loss: {best_loss}')
 log.info(f'best param: {best_param}')
 log.info(f'best loss: {best_loss}')

@@ -76,7 +76,8 @@ class ABMPandemic:
         # self.drive_chance = ts_chances_df['drive']
         # self.metro_chance = ts_chances_df['metro']
         # self.bus_chance = ts_chances_df['bus']
-        self.result_df = pd.DataFrame(columns=['total cases',
+        self.result_df = pd.DataFrame(columns=['date',
+                                               'total cases',
                                                'positive cases',
                                                'infected',
                                                # 'recovered cases',
@@ -158,19 +159,20 @@ class ABMPandemic:
         """calculate the statistical pandemic data for each day"""
 
         # total_case_num = self.agents_df
-        positive_case_num = self.infected_df.query('quarantine==1')
+        positive_case_num = len(self.infected_df.query('quarantine==1'))
         infected_num = len(self.infected_df)
         # recovered_case_num = 0
         real_recovered_case_num = len(self.recovery_df)
         dead_num = len(self.dead_df)
-        self.result_df = self.result_df.append({'total cases': self.total_case_num,
+        self.result_df = self.result_df.append({'date': self.date.strftime("%Y-%m-%d"),
+                                                'total cases': self.total_case_num,
                                                 'positive cases': positive_case_num,
                                                 'infected': infected_num,
                                                 # 'recovered cases': recovered_case_num,
                                                 'real recovered cases': real_recovered_case_num,
                                                 'dead': dead_num}, ignore_index=True)
 
-    def run(self) -> list:
+    def run(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         while True:
             log.info(self.date)
             daily_positive_num = self.daily_positive_series.loc[self.date]
@@ -185,7 +187,7 @@ class ABMPandemic:
             self.date = self.date + datetime.timedelta(1)
         log.info(f"dead data: {self.result_df['dead']}")
 
-        return self.result_df['dead']
+        return (self.result_df, self.recovery_df)
 
     def holiday(self, today_positive_num):
         for hour in range(24):

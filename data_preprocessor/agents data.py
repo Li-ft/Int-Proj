@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 import numpy as np
-from data_preprocessor_utils import *
+from utils import *
 
 # %%
 unemployment_rate = 0.102
