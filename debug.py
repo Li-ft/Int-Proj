@@ -83,8 +83,8 @@ abm = ABMPandemic(begin_date=begin_date,
                       origin_infected_num=int(origin_infected_num))
 
 result, infect_map_df=abm.run()
-result.to_csv('data/abm result.csv')
-infect_map_df.to_csv('data/infect map.csv')
+result.to_csv('data/result/abm result.csv')
+infect_map_df.to_csv('data/result/infect map.csv')
 train_value = list(result['dead'])
 real_value = covid_data_df.loc[begin_date:end_date, 'Total Death']
 for v1,v2 in zip(train_value,real_value):
