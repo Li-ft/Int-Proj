@@ -4,7 +4,7 @@ from datetime import datetime
 
 begin_date='2020-02-22'
 end_date = '2020-05-31'
-pred_df = pd.read_csv("../data/result/abm result.csv",
+pred_df = pd.read_csv("data/result/abm result.csv",
                       index_col='date',
                       date_parser=lambda x: datetime.strptime(x, '%Y-%m-%d'))
 real_df=pd.read_excel(r"../data\covid data torino province.xlsx",
