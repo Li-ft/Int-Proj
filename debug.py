@@ -1,9 +1,8 @@
 from datetime import datetime
 import pandas as pd
 from abm.abmpandemic import ABMPandemic
-from sko.GA import GA
 from sklearn.metrics import mean_squared_error as mse
-from logs.config import log_config
+
 
 # p=[0.17831502 ,0.05362637, 0.05929412, 0.23462736, 0.35295733, 0.11124336,
 #  0.04258824, 0.42601636, 90, 60, 30]
