@@ -12,6 +12,8 @@ mask_buff = 0.85
 mandatory_mask_begin_date = '2020-05-18'
 optional_mask_begin_date = '2020-06-02'
 seed = 2019
+# online_work_begin_date = '2020-04-30'
+# online_work_rate = 0.8
 
 
 class ABMPandemic:
@@ -113,7 +115,7 @@ class ABMPandemic:
         self.new_case = 0
         self.has_normal_bed = True
         self.has_severe_bed = True
-        self.sickbed_buff = sickbed_buff * 0.2
+        self.sickbed_buff = sickbed_buff
 
         self.space_constraint_df = pd.DataFrame()
         self.recovery_df = pd.DataFrame()
@@ -241,7 +243,7 @@ class ABMPandemic:
             # only people who are not in a leisure place already can choose a leisure place
             susceptible_can_leisure_df = self.susceptible_df.query('leisure_timer<1 & identity in [5,6]')
         else:
-            susceptible_can_leisure_df = self.susceptible_df.query('leisure_timer<1')
+            susceptible_can_leisure_df = self.susceptible_df.query('leisure_timer<1 & identity < 10')
 
         # susceptible_leisure_df = \
         self.assign_leisure_place(susceptible_can_leisure_df, leisure_space_df.index,
@@ -525,6 +527,7 @@ class ABMPandemic:
         # print(f'new infected: {new_infected_agent_idx}')
         new_infected_df = self.susceptible_df.loc[new_infected_agent_idx]
         new_infected_df.loc[:, 'covid_state'] = 1
+        new_infected_df['infect_buff']=1
         # the transition time from latent to normal symptom is a gamma distribution
         np.random.seed(seed)
         new_infected_df.loc[:, 'covid_state_timer'] = np.random.gamma(3.8, 0.66, len(new_infected_df))
@@ -609,12 +612,21 @@ class ABMPandemic:
         # self.add_2severe_bed(severe_idx)
 
     def policy_ctrl(self, date, hour: int):
-        if date == pd.to_datetime(mandatory_mask_begin_date) and hour == 0:
-            self.mandatory_mask()
-        if date == pd.to_datetime(optional_mask_begin_date) and hour == 0:
-            self.optional_mask()
-
         """realize the influence of the policy"""
+
+        # if date == pd.to_datetime(online_work_begin_date) and hour == 0:
+        #     np.random.seed(seed)
+        #     worker_idx = self.susceptible_df.query('1<=identity<=4').index
+        #     online_work_ppl = np.random.choice(worker_idx, int(len(worker_idx) * online_work_rate), replace=False)
+        #     self.susceptible_df.loc[online_work_ppl, 'identity'] = 11
+
+        if date == pd.to_datetime(mandatory_mask_begin_date) and hour == 0:
+            mandatory_mask_ppl_idx = self.get_mandatory_mask_ppl()
+            self.mandatory_mask(mandatory_mask_ppl_idx)
+        if date == pd.to_datetime(optional_mask_begin_date) and hour == 0:
+            mandatory_mask_ppl_idx = self.get_mandatory_mask_ppl()
+            self.optional_mask(mandatory_mask_ppl_idx)
+
         cur_limit_hour = self.policy_df.loc[date, 'from']
         cur_limit_type = self.policy_df.loc[date, 'type']
         # log.warning(f'{cur_limit_type} {cur_limit_hour}')
@@ -820,16 +832,18 @@ class ABMPandemic:
         #     log.debug(f'infected: {self.susceptible_df.index}')
         self.susceptible_df.loc[susceptible_idx, 'space_acreage'] = self.space_df.loc[space_idx, 'acreage'].tolist()
 
-    def mandatory_mask(self):
+    def mandatory_mask(self, mask_ppl_index: Collection[int]):
         log.warning('mandatory mask')
         # only the staffs in the stores and shops are mandatory to wear the mask
-        mandatory_mask_ppl_idx = chain.from_iterable((self.space_df.query('type<2'))['staffs_idx'])
-        mandatory_mask_ppl_idx = set(mandatory_mask_ppl_idx).intersection(set(self.susceptible_df.index))
+        mandatory_mask_ppl_idx = set(mask_ppl_index).intersection(set(self.susceptible_df.index))
         self.susceptible_df.loc[mandatory_mask_ppl_idx, 'infect_buff'] *= mask_buff
 
-    def optional_mask(self):
+    def optional_mask(self, unmask_ppl_index: Collection[int]):
         log.warning('optional mask')
         # only the staffs in the stores and shops are mandatory to wear the mask
-        mandatory_mask_ppl_idx = chain.from_iterable((self.space_df.query('type<2'))['staffs_idx'])
-        mandatory_mask_ppl_idx = set(mandatory_mask_ppl_idx).intersection(set(self.susceptible_df.index))
+        mandatory_mask_ppl_idx = set(unmask_ppl_index).intersection(set(self.susceptible_df.index))
         self.susceptible_df.loc[mandatory_mask_ppl_idx, 'infect_buff'] /= mask_buff
+
+    def get_mandatory_mask_ppl(self) -> Collection[int]:
+        return list(chain.from_iterable((self.space_df.query('type<2'))['staffs_idx']))
+        # return self.susceptible_df.index

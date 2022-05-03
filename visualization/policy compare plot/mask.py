@@ -28,7 +28,7 @@ baseline_dead= baseline_df.loc[begin_date: end_date, 'dead']
 
 plt.figure()
 # plt.plot(pred_dead, label='predict')
-plt.plot(baseline_dead, label='baseline')
+plt.plot(baseline_dead, label='baseline mortality')
 # for mortality in mortality_changes:
 plt.bar([baseline_df.index[i] for i in range(len(baseline_df)) if (i + 2) % 7 == 0],
         mortality_changes,
@@ -38,11 +38,13 @@ plt.bar([baseline_df.index[i] for i in range(len(baseline_df)) if (i + 2) % 7 ==
 x_ticks=[baseline_df.index[i] for i in range(len(baseline_df)) if (i + 2) % 7 == 0]
 plt.xticks(x_ticks, [x.strftime("%m-%d") for x in x_ticks], rotation=45)
 plt.legend()
-plt.title("Policy influence at the beginning of COVID-19")
+plt.title("Different Start Time for Mandatory Mask")
 plt.xlabel("Date")
 plt.ylabel("Mortality")
 plt.tight_layout()
+plt.savefig("mask.png",dpi=600)
 plt.show()
+
 
 # plt.figure()
 # plt.plot

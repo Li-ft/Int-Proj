@@ -31,4 +31,5 @@ plt.title('Mortality comparison with no constraint on shops')
 x_ticks=[baseline_df.index[i] for i in range(len(baseline_df)) if (i + 2) % 7 == 0]
 plt.xticks(x_ticks, [x.strftime("%m-%d") for x in x_ticks], rotation=45)
 plt.tight_layout()
+plt.savefig("close shop.png",dpi=600)
 plt.show()
