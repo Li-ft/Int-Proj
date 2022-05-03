@@ -5,12 +5,14 @@ from sko.GA import GA
 from sklearn.metrics import mean_squared_error as mse
 from logs.config import log_config
 from sko.tools import set_run_mode
+import os
 
-log = log_config('result', r'.\logs\result.txt')
+proj_path=os.path.abspath('.')
+log = log_config('result', proj_path+r'/logs/result.txt')
 
 begin_date = '2020-02-22'
 end_date = '2020-05-31'
-agents_df = pd.read_csv(r"data\agents.csv",
+agents_df = pd.read_csv(proj_path+r"/data/agents.csv",
                         dtype={'home_x': float,
                                'home_y': float,
                                'family_idx': int,
@@ -21,7 +23,7 @@ agents_df = pd.read_csv(r"data\agents.csv",
                                'use_pt': int,
                                'employer': int,
                                'quarantine': int})
-space_df = pd.read_csv(r"data\business point.csv",
+space_df = pd.read_csv(proj_path+r"/data/business point.csv",
                        index_col=0,
                        dtype={'type': int,
                               'acreage': float},
@@ -31,15 +33,15 @@ space_df = pd.read_csv(r"data\business point.csv",
                            'staffs_idx': eval})
 
 policy_df = pd.read_excel(
-    r"data\policy constraint.xlsx",
+    proj_path+r"/data/policy constraint.xlsx",
     sheet_name=0,
     index_col='date',
     date_parser=lambda x: pd.datetime.strptime(x, '%Y-%m-%d'))
-holiday_df = pd.read_csv(r"data\holiday.csv",
+holiday_df = pd.read_csv(proj_path+r"/data/holiday.csv",
                          index_col='date',
                          date_parser=lambda x: datetime.strptime(x, '%Y/%m/%d'))
 covid_data_df = pd.read_excel(
-    r"data\covid data torino province.xlsx",
+    proj_path+r"/data/covid data torino province.xlsx",
     sheet_name=0,
     index_col='Date',
     date_parser=lambda x: datetime.strptime(x, '%Y-%m-%d'))
