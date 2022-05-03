@@ -10,7 +10,7 @@ p = [0.30177623145943966, 0.024417043096081066, 0.08680351906158358, 0.255976071
 
 begin_date = '2020-02-22'
 end_date = '2020-05-31'
-agents_df = pd.read_csv(proj_path + r"/data\agents.csv",
+agents_df = pd.read_csv(proj_path + r"\data\agents.csv",
                         dtype={'home_x': float,
                                'home_y': float,
                                'family_idx': int,
@@ -21,25 +21,22 @@ agents_df = pd.read_csv(proj_path + r"/data\agents.csv",
                                'use_pt': int,
                                'employer': int,
                                'quarantine': int})
-space_df = pd.read_csv(proj_path + r"/data\business point.csv",
+space_df = pd.read_csv(proj_path + r"\data\business point.csv",
                        index_col=0,
                        dtype={'type': int,
                               'acreage': float},
-                       converters={
-                           # 'susceptible_inside': eval,
-                           # 'infector_inside': eval,
-                           'staffs_idx': eval})
+                       converters={'staffs_idx': eval})
 
 policy_df = pd.read_excel(
-    proj_path + r"/data\policy constraint.xlsx",
+    proj_path + r"\data\policy constraint.xlsx",
     sheet_name=0,
     index_col='date',
     date_parser=lambda x: pd.datetime.strptime(x, '%Y-%m-%d'))
-holiday_df = pd.read_csv(proj_path + r"/data\holiday.csv",
+holiday_df = pd.read_csv(proj_path + r"\data\holiday.csv",
                          index_col='date',
                          date_parser=lambda x: datetime.strptime(x, '%Y/%m/%d'))
 covid_data_df = pd.read_excel(
-    proj_path + r"/data\covid data torino province.xlsx",
+    proj_path + r"\data\covid data torino province.xlsx",
     sheet_name=0,
     index_col='Date',
     date_parser=lambda x: datetime.strptime(x, '%Y-%m-%d'))
@@ -70,28 +67,8 @@ abm = ABMPandemic(begin_date=begin_date,
                   infectious_dur=int(infectious_dur),
                   origin_infected_num=int(origin_infected_num))
 
-# result, infect_map_df=abm.run()
 result_df, _ = abm.run()
-# infect_map_df=infect_map_df.groupby(['home_x','home_y']).size().reset_index()
-# infect_map_df.rename(columns={0:'sum'},inplace=True)
-# home_x_min=infect_map_df['home_x'].min()
-# home_x_max=infect_map_df['home_x'].max()
-# home_y_min=infect_map_df['home_y'].min()
-# home_y_max=infect_map_df['home_y'].max()
-# map_lst=[]
-# for x in range(int(home_x_min), int(home_x_max)-100,100):
-#     for y in range(int(home_y_min), int(home_y_max)-100, 100):
-#         result=infect_map_df.query(f'{x}<home_x<{x+100} & {y}<home_y<{y+100}')
-#         if len(result) <= 0:
-#             continue
-#         print(result)
-#         sum=result['sum'].sum()
-#         map_lst.append({'x':x,
-#                         'y':y,
-#                         'sum':sum})
-# map_df=pd.DataFrame(map_lst,columns=['x','y','sum'])
-# infect_map_df.to_csv('data/result/infect map.csv')
-result_df.to_csv(proj_path + r"/data/result/abm result.csv", index=False)
+result_df.to_csv(proj_path + r"/data/result/online working/online late3.csv", index=False)
 train_value = list(result_df['dead'])
 real_value = covid_data_df.loc[begin_date:end_date, 'Total Death']
 for v1, v2 in zip(train_value, real_value):
