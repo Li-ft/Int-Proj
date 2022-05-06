@@ -105,9 +105,8 @@ ga = GA(func=loss_func,
         ub=[1, 0.5, 0.1, 0.9, 0.5, 0.9, 0.1, 0.9, 240, 240, 200],
         precision=[1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1, 1, 1],
         constraint_eq=[constraint_ueq])
-for epoch in range(100):
-    best_param, best_loss = ga.run(1)
-    log.info(f'best param of epoch {epoch}: {best_param}')
-    log.info(f'best loss of epoch {epoch}: {best_loss}\n\n')
+best_param, best_loss = ga.run()
+log.info(f'best param of epoch: {best_param}')
+log.info(f'best loss of epoch: {best_loss}\n\n')
 
 # best_result_log.info(f'param: {best_param} \n loss: {best_loss}')
